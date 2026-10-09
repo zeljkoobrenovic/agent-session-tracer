@@ -23,7 +23,7 @@ def main():
         print(f"{os.path.basename(p)}: {len(t['turns'])} turns, {len(t['files'])} files")
     template = open(os.path.join(HERE, "template.html")).read()
     page = template.replace("${examples}", json.dumps(traces).replace("</", "<\\/")) \
-        .replace("${generated}", datetime.date.today().isoformat())
+        .replace("${generated}", datetime.date.today().isoformat()).replace("${live}", "null")
     os.makedirs(os.path.join(HERE, "docs"), exist_ok=True)
     with open(os.path.join(HERE, "docs", "index.html"), "w") as f:
         f.write(page)

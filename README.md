@@ -25,6 +25,21 @@ python3 turn_trace.py --transcript ~/.claude/projects/<slug>/<id>.jsonl --root /
 Then open the page (or `docs/index.html` locally) and drop `trace.json` on it, or pick it with the file input.
 Python 3.8+, no dependencies.
 
+### Live: watch a session as it runs
+
+```bash
+python3 serve.py                                   # follows the latest session of the folder you are in
+python3 serve.py --cwd /path/you/ran/claude/in     # ... of another folder
+python3 serve.py --session f8fc5201 --interval 5   # pins one session; refresh every 5 s (default 3)
+```
+
+`serve.py` starts a local server (http://localhost:8765, `--port` to change) and opens the page in live mode
+(`--no-browser` not to). The page polls the trace every few seconds and re-renders it in place, keeping the selected
+turn and the scroll position; "follow newest turn" scrolls to each new column as it arrives. The trace is re-extracted
+only when the transcript file changes, and a new session started in the folder is picked up automatically unless
+`--session` pins one. A session dropdown in the page switches to any other session of the folder without restarting. Traces dropped on the live page are kept alongside for comparison. Everything stays on your
+machine: the server listens on localhost only.
+
 Options: `--root` shortens file paths relative to a folder (default: the session's working directory); `--source-root`
 says where the files are now, for their total line counts (default: `--root`); `--title` names the trace.
 
@@ -43,14 +58,25 @@ transcript.
 - **Output.** The call's output tokens.
 - **Tool calls.** One chip per call (S search, R read, E edit, B build/test, G git, a tick for the final answer), with
   rows per kind underneath and the lines of output in the totals.
-- **Files.** One row per file: lines read (blue), edits (orange), search output lines naming it (dot or count), its
+- **Cost.** The run's recorded cost when the trace has one, otherwise an estimate from the model's list prices (cache
+  reads, 1-hour cache writes, uncached input, output; Haiku 5.5's long-prompt rate per turn). The price table is in
+  `template.html`, dated; the turn detail shows each turn's share.
+- **Seconds per turn.** The model's time (from the prompt or the previous tool result until the response finished
+  streaming) and the time its tools then took, from the transcript's timestamps. Waits between prompts are not counted.
+- **Prompts.** Where each message you typed starts (a numbered mark and a column border); the turns up to the next
+  mark are the agent's answer to it. Hover the mark for the message. A table under the grid lists every prompt with
+  the tokens its turns caused, as a share of the session, with their time and cost.
+- **Files.** Sortable (first seen, lines read, edits, hits, size, name) and filterable by path. One row per file: lines read (blue), edits (orange), search output lines naming it (dot or count), its
   total line count, and the first turn it appeared. Files seen only in search results are hidden by default.
 
 Hover a cell for details, click a turn to list its commands. All three token rows share one scale.
 
 File attribution is heuristic: `Read`, `cat`, `sed -n`, `head` and `tail` of a path count as read lines; `Edit`,
-`Write` and `sed -i` as edits; a `grep` output line naming a file as a search hit; a piped `head` is a filter, not a read;
-the shell's working directory is tracked across `cd`; failed commands contribute no file reads.
+`Write`, `sed -i`, a redirect into a file (`cat > f <<EOF`, `echo >> f`), `tee f` and a script fed through a heredoc
+that writes files (`python3 - <<PY` with `open(p, "w")`, in which case every path the script names counts) as edits;
+a `grep` output line naming a file as a search hit; a piped `head` is a filter, not a read; heredoc bodies are kept
+out of the shell parsing; the shell's working directory is tracked across `cd`; failed commands contribute no file
+reads.
 
 ## Trace format
 
@@ -60,6 +86,8 @@ the shell's working directory is tracked across `cd`; failed commands contribute
   "shared_prefix": 10874,        # cache read by the first call: the static prefix shared by every session
   "turns": [ {"n": 1, "input": 2, "cache_read": 10874, "cache_write": 8434, "output": 105,
               "text": "what the agent said (first line)", "result_chars": 3425,
+              "prompt": "the user's message this turn starts answering (first line); only on those turns",
+              "at": "2026-10-09T19:20:08.629Z", "seconds": {"model": 3.6, "tools": 0.8},
               "new": {"prev_output": 147, "tool_results": 1489, "setup": 0, "other": 0},
               "tools": [ {"tool": "Bash", "kind": "search|read|edit|build|vcs|shell|text", "detail": "the command or path",
                           "lines": 30, "files": [ {"path": "a/b.java", "kind": "read|edit|hit", "lines": 30} ] } ] } ],
@@ -72,8 +100,8 @@ the shell's working directory is tracked across `cd`; failed commands contribute
 `examples/*.json` are traces of runs from the
 [sokrates-size-experiment](https://github.com/zeljkoobrenovic/sokrates-size-experiment) (does splitting long files
 save an agent tokens? below the read budget it does not), Sonnet 5.5 and Haiku 5.5 on the same task against long and
-split files. `build_page.py` embeds them into `docs/index.html` from `template.html`; the page is a single file with no
-external resources, light and dark.
+split files. `build_page.py` embeds them into `docs/index.html` from `template.html`; the page loads nothing from the network
+(its only companion file is the logo), light and dark, and `serve.py` serves the same template in live mode.
 
 ## License
 
