@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude session tracer</title>
+<meta name="description" content="What an AI coding agent reads, searches and edits in each turn, and what each turn re-sends from the cache, adds to it and produces.">
+<style>
+:root {
+  --bg: #fcfcfb; --surface: #ffffff; --surface-2: #f3f2ef; --border: #dedcd6; --text: #0b0b0b; --muted: #52514e; --faint: #8a8984;
+  --read: #2a78d6; --read-soft: #cde2fb; --write: #eb6834; --write-soft: #fbd9cb; --output: #1baf7a; --output-soft: #c8efdf;
+  --hit: #9ec5f4; --build: #8a8984; --error: #e34948; --col: 34px; --setup: #eda100; --prefix: #86b6ef;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1a1a19; --surface: #232322; --surface-2: #2c2c2a; --border: #3d3d3a; --text: #ffffff; --muted: #c3c2b7; --faint: #8a8984;
+  --read: #3987e5; --read-soft: #1c3d66; --write: #d95926; --write-soft: #5a2a16; --output: #199e70; --output-soft: #174436; --hit: #2a5a94; --setup: #c98500; --prefix: #1c5cab;
+} }
+:root[data-theme="dark"] {
+  --bg: #1a1a19; --surface: #232322; --surface-2: #2c2c2a; --border: #3d3d3a; --text: #ffffff; --muted: #c3c2b7; --faint: #8a8984;
+  --read: #3987e5; --read-soft: #1c3d66; --write: #d95926; --write-soft: #5a2a16; --output: #199e70; --output-soft: #174436; --hit: #2a5a94; --setup: #c98500; --prefix: #1c5cab;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+main { max-width: 1400px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: 24px; margin: 0 0 4px; }
+.lead { color: var(--muted); margin: 0 0 16px; max-width: 900px; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin: 12px 0; }
+.controls label { color: var(--muted); font-size: 14px; }
+select, button, input[type=file] { font: inherit; font-size: 14px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; }
+.summary { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 8px 0 16px; font-size: 14px; color: var(--muted); }
+.summary b { color: var(--text); font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); margin: 8px 0 12px; }
+.legend span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--c); }
+.grid-wrap { display: inline-block; max-width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); vertical-align: top; }
+table.grid { border-collapse: separate; border-spacing: 0; font-size: 12px; width: auto; }
+.grid th, .grid td { padding: 0; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.grid th.head { position: sticky; left: 0; z-index: 2; background: var(--surface); text-align: left; padding: 2px 10px; font-weight: 500; min-width: 280px; max-width: 460px; overflow: hidden; text-overflow: ellipsis; border-right: 1px solid var(--border); }
+.grid thead th { position: sticky; top: 0; z-index: 3; background: var(--surface-2); font-weight: 600; color: var(--muted); text-align: center; height: 26px; border-bottom: 1px solid var(--border); }
+.grid thead th.head { z-index: 4; }
+.grid td.cell { width: var(--col); min-width: var(--col); text-align: center; vertical-align: bottom; height: 30px; cursor: default; }
+.grid td.total { padding: 0 10px; text-align: right; color: var(--muted); border-left: 1px solid var(--border); min-width: 90px; }
+.grid thead th.total { text-align: right; padding: 0 10px; border-left: 1px solid var(--border); }
+.grid tr.token td.cell { height: 82px; position: relative; }
+.grid tr.token td.cell:hover::after { content: attr(data-v); position: absolute; left: 50%; top: 2px; transform: translateX(-50%); font-size: 10px; line-height: 14px; padding: 0 4px; border-radius: 3px; background: var(--text); color: var(--bg); white-space: nowrap; pointer-events: none; z-index: 1; }
+.grid tr.sub { display: none; }
+.grid tr.sub.shown { display: table-row; }
+.tg { font: inherit; font-size: 11px; line-height: 16px; width: 18px; padding: 0; margin: 0 4px 0 -4px; border: 0; background: none; color: var(--muted); cursor: pointer; border-radius: 4px; }
+.tg:hover { background: var(--surface-2); color: var(--text); }
+.grid tr.group th { background: var(--surface-2); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; height: 22px; }
+.grid tr.group td { background: var(--surface-2); }
+.bar { display: inline-block; width: calc(var(--col) - 8px); margin: 0 4px 3px; border-radius: 3px 3px 0 0; background: var(--c); vertical-align: bottom; min-height: 1px; }
+.stack { display: inline-flex; flex-direction: column-reverse; gap: 2px; width: calc(var(--col) - 8px); margin: 0 4px 3px; vertical-align: bottom; }
+.seg { display: block; background: var(--c); border-radius: 2px; }
+.seg:last-child { border-radius: 3px 3px 2px 2px; }
+.chip { display: inline-block; min-width: calc(var(--col) - 8px); margin: 0 2px 4px; padding: 1px 2px; border-radius: 4px; font-size: 11px; line-height: 16px; color: #fff; font-weight: 600; background: var(--c); }
+.chip.hit { background: var(--hit); color: var(--text); font-weight: 400; }
+.chip.read { background: var(--read); }
+.chip.edit { background: var(--write); }
+.chip.err { outline: 2px solid var(--error); outline-offset: -2px; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--hit); margin-bottom: 8px; }
+.tool { display: inline-block; width: 16px; height: 16px; line-height: 16px; border-radius: 4px; font-size: 10px; font-weight: 700; color: #fff; background: var(--c); margin: 0 1px 4px; }
+.tool.search { background: var(--faint); color: var(--bg); }
+.tool.read { background: var(--read); }
+.tool.edit { background: var(--write); }
+.tool.build { background: var(--build); }
+.tool.vcs, .tool.shell { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+.tool.text { background: var(--output); }
+.tool.err { outline: 2px solid var(--error); outline-offset: -2px; }
+.path .dir { color: var(--faint); }
+.path .name { color: var(--text); }
+.path.edited .name { font-weight: 600; }
+.head .n { color: var(--faint); margin-left: 8px; font-size: 11px; font-weight: 400; }
+.grid td.cell.sel, .grid thead th.sel { background: var(--surface-2); }
+.grid tbody tr:hover td.cell, .grid tbody tr:hover th.head { background: var(--surface-2); }
+#detail { margin-top: 16px; font-size: 14px; clear: both; }
+#detail h2 { font-size: 16px; margin: 0 0 6px; }
+#detail ol { margin: 0; padding-left: 22px; }
+#detail li { margin: 4px 0; }
+#detail code { font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; white-space: pre-wrap; word-break: break-all; }
+#detail .k { display: inline-block; min-width: 54px; color: var(--muted); }
+.tip { position: fixed; z-index: 10; pointer-events: none; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 12px; max-width: 520px; box-shadow: 0 4px 16px rgba(0,0,0,.15); white-space: pre-wrap; word-break: break-all; display: none; }
+.note { color: var(--muted); font-size: 14px; max-width: 900px; }
+.drop { border: 1px dashed var(--border); border-radius: 8px; padding: 10px 14px; color: var(--muted); font-size: 14px; margin: 16px 0; }
+footer { color: var(--faint); font-size: 13px; margin-top: 32px; }
+a { color: var(--read); }
+</style>
+</head>
+<body>
+<main>
+<h1>Claude session tracer</h1>
+<p class="lead">One column per API call (a turn); the agent's tools in that turn below the token bars. The top rows show what each turn costs: the context re-sent from the prompt cache, the new context written to it (tool results, the agent's own words) and the output. The file rows show where the agent read, searched and edited. Hover a cell for details, click a turn to list its commands; the ▸ next to "Re-sent from cache", "New, written to cache" and "Tool calls" opens their breakdown.</p>
+
+<div class="controls">
+  <label>Example <select id="pick"></select></label>
+  <label><input type="checkbox" id="hideHits" checked> hide files only seen in search results</label>
+  <label><input type="checkbox" id="cumulative"> cumulative context</label>
+  <label>Your own trace: <input type="file" id="file" accept=".json,application/json"></label>
+</div>
+<div class="summary" id="summary"></div>
+<div class="legend">
+  <span style="--c: var(--read)">lines read (file) · context re-sent from cache (tokens)</span>
+  <span style="--c: var(--write)">lines edited (file) · new context written to cache: tool results (tokens)</span>
+  <span style="--c: var(--output)">… the agent's previous output, now context</span>
+  <span style="--c: var(--setup)">… session setup (first turn: dynamic system prompt, listings, CLAUDE.md, task prompt)</span>
+  <span style="--c: var(--faint)">… reminders, injected instructions</span>
+  <span style="--c: var(--prefix)">shared prefix re-sent from cache: static system prompt and tool definitions, the same in every session</span>
+  <span style="--c: var(--hit)">lines of search output naming the file</span>
+  <span style="--c: var(--output)">output tokens</span>
+  <span style="--c: var(--faint)">tool chips: S search · R read · E edit · B build/test · G git · ✓ final answer</span>
+</div>
+<div class="grid-wrap"><table class="grid" id="grid"></table></div>
+<div id="detail"></div>
+<div class="drop">Drop a trace JSON here to render it. Make one from any Claude Code session with <code>python3 turn_trace.py --cwd /path/you/ran/claude/in --out trace.json</code> (<code>--list</code> shows the sessions of a folder); see the <a href="https://github.com/zeljkoobrenovic/claude-session-tracer">repository</a>.</div>
+<p class="note">Reading the bars: the blue bar grows every turn because the whole conversation so far is re-sent with each call, and the thin slice on top of it is what the turn added, which the next turn re-sends in blue; the second row shows that slice alone: the results of the tools it called last turn (orange, estimated at 2.3 characters per token, the rate measured on these transcripts), the agent's own previous words and tool calls (green), on the first turn the session setup (yellow: the session-specific system prompt sections, the skill and agent listings, CLAUDE.md, the task prompt) and later the per-turn reminders and instructions the CLI injects (grey). The light-blue base of every blue bar is the static prefix shared by all sessions, the fixed system prompt and the tool definitions, which the CLI keeps cached, so even the first call reads it rather than writing it. The cost of a session is mostly the area under the blue bars, so the number of turns and what each one appends matter more than any single read. Lines attributed to files are those in tool output: a <code>Read</code> or <code>cat/sed/head</code> of the file counts as read lines, an <code>Edit</code> as edited lines, a <code>grep</code> output line naming the file as a search hit.</p>
+<footer>Generated ${generated}. The embedded examples are runs of the <a href="https://github.com/zeljkoobrenovic/sokrates-size-experiment">sokrates-size-experiment</a>; source and extractor at <a href="https://github.com/zeljkoobrenovic/claude-session-tracer">claude-session-tracer</a>. No external resources.</footer>
+</main>
+<div class="tip" id="tip"></div>
+<script id="examples" type="application/json">${examples}</script>
+<script>
+(function () {
+  var EXAMPLES = JSON.parse(document.getElementById('examples').textContent);
+  var pick = document.getElementById('pick'), grid = document.getElementById('grid'), tip = document.getElementById('tip');
+  var detail = document.getElementById('detail'), summary = document.getElementById('summary');
+  var hideHits = document.getElementById('hideHits'), cumulative = document.getElementById('cumulative');
+  var current = null, selected = null;
+  var open = {resent: false, new: false, tools: false};
+  try { var stored = JSON.parse(localStorage.getItem('trace-open') || '{}'); open.resent = !!stored.resent; open.new = !!stored.new; open.tools = !!stored.tools; } catch (e) {}
+  function toggle(which) { return '<button class="tg" data-toggle="' + which + '" aria-expanded="' + open[which] + '" title="show or hide the breakdown">' + (open[which] ? '\u25BE' : '\u25B8') + '</button>'; }
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]; }); }
+  function fmt(n) { return n == null ? '–' : Math.round(n).toLocaleString('en-US'); }
+  function short(p) { var i = p.lastIndexOf('/'); return i < 0 ? '<span class="name">' + esc(p) + '</span>' : '<span class="name">' + esc(p.slice(i + 1)) + '</span> <span class="dir">' + esc(p.slice(0, i)) + '</span>'; }
+  var LETTER = {search: 'S', read: 'R', edit: 'E', build: 'B', vcs: 'G', shell: '$', text: '✓'};
+
+  function tokenValues(turns, key) {
+    var vals = turns.map(function (t) { var k = key.split('.'); return (k.length > 1 ? (t[k[0]] || {})[k[1]] : t[key]) || 0; });
+    if (cumulative.checked && key !== 'cache_read') { var acc = 0; vals = vals.map(function (v) { return acc += v; }); }
+    return vals;
+  }
+
+  var NEW_PARTS = [['tool_results', 'tool results', 'var(--write)'], ['prev_output', "the agent's previous output", 'var(--output)'],
+                   ['setup', 'session setup: dynamic system prompt, listings, CLAUDE.md, task prompt', 'var(--setup)'], ['other', 'reminders, injected instructions', 'var(--faint)']];
+
+  var trace = null;
+  function tokenRow(label, key, color, turns, total, max, rowClass, headExtra) {
+    var vals = tokenValues(turns, key);
+    var h = '<tr class="token' + (rowClass ? ' ' + rowClass : '') + '"><th class="head">' + (headExtra || '') + esc(label) + '<span class="n">max ' + fmt(Math.max.apply(null, vals.concat([0]))) + '</span></th>';
+    vals.forEach(function (v, i) {
+      var t = turns[i], tip = 'turn ' + (i + 1) + ': ' + fmt(v) + ' tokens — ' + label.replace(/^\u2003/, '').toLowerCase();
+      if (key === 'cache_read') {  // the re-sent context in blue, with what this turn added stacked on top in the new-context colors
+        var parts = t.new ? NEW_PARTS.map(function (p) { return [t.new[p[0]] || 0, p[1], p[2]]; }) : [[t.cache_write || 0, 'new, written to cache', 'var(--write)']];
+        var prefix = Math.min(trace.shared_prefix || 0, v);
+        parts.unshift([v - prefix, 're-sent from cache: this session', 'var(--read)']);
+        parts.unshift([prefix, 'shared prefix: static system prompt and tool definitions, cached once for every session', 'var(--prefix)']);
+        tip = 'turn ' + (i + 1) + ': ' + fmt(v + (t.cache_write || 0)) + ' tokens of context' + parts.map(function (p) { return '\n  ' + fmt(p[0]) + ' ' + p[1]; }).join('');
+        var ph = parts.map(function (p) { return Math.round(76 * p[0] / max); });
+        if (!ph.some(function (x) { return x > 0; })) ph[0] = 1;
+        h += '<td class="cell" data-turn="' + i + '" data-v="' + fmt(v + (t.cache_write || 0)) + '" data-tip="' + esc(tip) + '"><span class="stack">' +
+          parts.map(function (p, j) { return ph[j] ? '<span class="seg" style="--c:' + p[2] + ';height:' + ph[j] + 'px"></span>' : ''; }).join('') + '</span></td>';
+      } else if (key === 'cache_write' && t.new && !cumulative.checked) {
+        tip += NEW_PARTS.map(function (p) { return '\n  ' + fmt(t.new[p[0]]) + ' ' + p[1]; }).join('');
+        var px = NEW_PARTS.map(function (p) { return Math.round(76 * t.new[p[0]] / max); });
+        if (!px.some(function (x) { return x > 0; })) {  // too small for the scale: one 1px line in the color of the largest part
+          var big = NEW_PARTS.reduce(function (b, p, j) { return t.new[p[0]] > t.new[NEW_PARTS[b][0]] ? j : b; }, 0);
+          px[big] = 1;
+        }
+        h += '<td class="cell" data-turn="' + i + '" data-v="' + fmt(v) + '" data-tip="' + esc(tip) + '"><span class="stack">' +
+          NEW_PARTS.map(function (p, j) { return px[j] ? '<span class="seg" style="--c:' + p[2] + ';height:' + px[j] + 'px"></span>' : ''; }).join('') + '</span></td>';
+      } else {
+        h += '<td class="cell" data-turn="' + i + '" data-v="' + fmt(v) + '" data-tip="' + esc(tip) + '"><span class="bar" style="--c:' + color + ';height:' + Math.max(1, Math.round(76 * v / max)) + 'px"></span></td>';
+      }
+    });
+    return h + '<td class="total">' + fmt(total) + '</td></tr>';
+  }
+
+  function render(t) {
+    current = trace = t;
+    var turns = trace.turns, n = turns.length;
+    document.documentElement.style.setProperty('--col', (n > 40 ? 24 : n > 25 ? 28 : 34) + 'px');
+    var sum = function (k) { return turns.reduce(function (a, t) { return a + (t[k] || 0); }, 0); };
+    var m = trace.meta || {};
+    var linesRead = trace.files.reduce(function (a, f) { return a + (f.read || 0); }, 0);
+    var edits = trace.files.reduce(function (a, f) { return a + (f.edits || 0); }, 0);
+    summary.innerHTML = '<span><b>' + esc(trace.title) + '</b></span>' +
+      (m.model ? '<span>model <b>' + esc(m.model) + '</b></span>' : '') +
+      (m.task ? '<span>task <b>' + esc(m.task) + '</b> (' + esc(m.kind || '') + ', variant ' + esc(m.variant || '') + ')</span>' : '') +
+      '<span>turns <b>' + n + '</b></span>' +
+      '<span>input tokens <b>' + fmt(sum('cache_read') + sum('cache_write') + sum('input')) + '</b> (re-sent ' + fmt(sum('cache_read')) + ', new ' + fmt(sum('cache_write')) + ')</span>' +
+      '<span>output <b>' + fmt(sum('output')) + '</b></span>' +
+      (m.cost_usd != null ? '<span>cost <b>$' + m.cost_usd.toFixed(2) + '</b></span>' : '') +
+      '<span>files read <b>' + trace.files.filter(function (f) { return f.read; }).length + '</b>, lines read <b>' + fmt(linesRead) + '</b>, edits <b>' + edits + '</b></span>' +
+      (m.success != null ? '<span>acceptance test <b>' + (m.success ? 'passed' : 'failed') + '</b></span>' : '');
+
+    var h = '<thead><tr><th class="head">turn</th>';
+    for (var i = 0; i < n; i++) h += '<th data-turn="' + i + '">' + (i + 1) + '</th>';
+    h += '<th class="total">total</th></tr></thead><tbody>';
+    var max = Math.max.apply(null, ['cache_write', 'input', 'output'].reduce(function (a, k) { return a.concat(tokenValues(turns, k)); }, [1])
+      .concat(turns.map(function (t) { return (t.cache_read || 0) + (t.cache_write || 0); })));
+    h += '<tr class="group"><th class="head">Context per turn (tokens, one scale: ' + fmt(max) + ' = full bar)</th><td colspan="' + (n + 1) + '"></td></tr>';
+    turns.forEach(function (t) { t._prefix = Math.min(trace.shared_prefix || 0, t.cache_read || 0); t._history = (t.cache_read || 0) - t._prefix; });
+    h += tokenRow('Re-sent from cache, new on top', 'cache_read', 'var(--read)', turns, sum('cache_read'), max, 'parent' + (open.resent ? ' open' : ''), toggle('resent'));
+    h += tokenRow('\u2003of which shared prefix (static system prompt, tool definitions)', '_prefix', 'var(--prefix)', turns, sum('_prefix'), max, 'sub sub-resent');
+    h += tokenRow("\u2003of which this session's history", '_history', 'var(--read)', turns, sum('_history'), max, 'sub sub-resent');
+    var hasNew = turns.some(function (t) { return t.new; });
+    h += tokenRow('New, written to cache', 'cache_write', 'var(--write)', turns, sum('cache_write'), max, hasNew ? 'parent' + (open.new ? ' open' : '') : '', hasNew ? toggle('new') : '');
+    if (hasNew) {
+      var sumNew = function (k) { return turns.reduce(function (a, t) { return a + ((t.new || {})[k] || 0); }, 0); };
+      h += tokenRow('\u2003of which tool results', 'new.tool_results', 'var(--write)', turns, sumNew('tool_results'), max, 'sub sub-new');
+      h += tokenRow("\u2003of which the agent's previous output", 'new.prev_output', 'var(--output)', turns, sumNew('prev_output'), max, 'sub sub-new');
+      h += tokenRow('\u2003of which session setup (dynamic system prompt, listings, CLAUDE.md, task prompt)', 'new.setup', 'var(--setup)', turns, sumNew('setup'), max, 'sub sub-new');
+      h += tokenRow('\u2003of which reminders, injected instructions', 'new.other', 'var(--faint)', turns, sumNew('other'), max, 'sub sub-new');
+    }
+    if (sum('input') > n * 10) h += tokenRow('Uncached input', 'input', 'var(--faint)', turns, sum('input'), max);
+    h += tokenRow('Output', 'output', 'var(--output)', turns, sum('output'), max);
+    h += '<tr class="parent' + (open.tools ? ' open' : '') + '"><th class="head">' + toggle('tools') + 'Tool calls</th>';
+    turns.forEach(function (t, i) {
+      h += '<td class="cell" data-turn="' + i + '" data-tip="' + esc(t.tools.map(function (x) { return x.kind + (x.error ? ' (failed)' : '') + ': ' + x.detail; }).join('\n')) + '">';
+      t.tools.forEach(function (x) { h += '<span class="tool ' + x.kind + (x.error ? ' err' : '') + '">' + (LETTER[x.kind] || '?') + '</span>'; });
+      h += '</td>';
+    });
+    h += '<td class="total">' + turns.reduce(function (a, t) { return a + t.tools.filter(function (x) { return x.kind !== 'text'; }).length; }, 0) + ' calls</td></tr>';
+    var KINDS = [['search', '\u2003search (grep, find, ls, Grep, Glob)'], ['read', '\u2003read (Read, cat, sed -n, head, tail)'], ['edit', '\u2003edit (Edit, Write, sed -i)'],
+                 ['build', '\u2003build and test (mvn, java)'], ['vcs', '\u2003git'], ['shell', '\u2003other shell']];
+    KINDS.forEach(function (k) {
+      var calls = turns.map(function (t) { return t.tools.filter(function (x) { return x.kind === k[0]; }); });
+      var count = calls.reduce(function (a, c) { return a + c.length; }, 0);
+      if (!count) return;
+      h += '<tr class="sub sub-tools"><th class="head">' + esc(k[1]) + '</th>';
+      calls.forEach(function (c, i) {
+        h += '<td class="cell" data-turn="' + i + '"' + (c.length ? ' data-tip="' + esc(c.map(function (x) { return (x.error ? '(failed) ' : '') + x.detail + ' → ' + fmt(x.lines) + ' lines'; }).join('\n')) + '"' : '') + '>';
+        c.forEach(function (x) { h += '<span class="tool ' + x.kind + (x.error ? ' err' : '') + '">' + (LETTER[x.kind] || '?') + '</span>'; });
+        h += '</td>';
+      });
+      var lines = calls.reduce(function (a, c) { return a + c.reduce(function (b, x) { return b + (x.lines || 0); }, 0); }, 0);
+      h += '<td class="total">' + count + (k[0] === 'edit' ? '' : ', ' + fmt(lines) + ' lines') + '</td></tr>';
+    });
+
+    var files = trace.files.filter(function (f) { return !hideHits.checked || f.read || f.edits; });
+    var hidden = trace.files.length - files.length;
+    h += '<tr class="group"><th class="head">Files (' + files.length + (hidden ? ', ' + hidden + ' search-only hidden' : '') + ')</th><td colspan="' + (n + 1) + '"></td></tr>';
+    // cells: file -> turn -> {read, edit, hit, tips[]}
+    var cells = {};
+    turns.forEach(function (t, i) {
+      t.tools.forEach(function (x) {
+        (x.files || []).forEach(function (f) {
+          var c = (cells[f.path] = cells[f.path] || {})[i] = (cells[f.path] || {})[i] || {read: 0, edit: 0, hit: 0, tips: []};
+          c[f.kind] += f.lines || 0;
+          c.tips.push(f.kind + (f.lines != null ? ' ' + f.lines + ' lines' : '') + ' — ' + x.tool + ': ' + x.detail.slice(0, 200));
+        });
+      });
+    });
+    files.forEach(function (f) {
+      var row = cells[f.path] || {};
+      h += '<tr><th class="head path' + (f.edits ? ' edited' : '') + '" title="' + esc(f.path) + '">' + short(f.path) + (f.lines ? '<span class="n">' + fmt(f.lines) + ' lines</span>' : '') + '</th>';
+      for (var i = 0; i < n; i++) {
+        var c = row[i];
+        h += '<td class="cell" data-turn="' + i + '"' + (c ? ' data-tip="' + esc('turn ' + (i + 1) + '\n' + c.tips.join('\n')) + '"' : '') + '>';
+        if (c) {
+          if (c.edit || (c.tips.some(function (s) { return s.indexOf('edit') === 0; }))) h += '<span class="chip edit">+' + fmt(c.edit) + '</span>';
+          if (c.read) h += '<span class="chip read">' + fmt(c.read) + '</span>';
+          if (c.hit && !c.read && !c.edit) h += (c.hit > 2 ? '<span class="chip hit">' + c.hit + '</span>' : '<span class="dot"></span>');
+        }
+        h += '</td>';
+      }
+      h += '<td class="total">' + (f.read ? fmt(f.read) + ' read' : '') + (f.edits ? (f.read ? ', ' : '') + f.edits + ' edit' + (f.edits > 1 ? 's' : '') : '') + (!f.read && !f.edits ? f.hits + ' hits' : '') + '</td></tr>';
+    });
+    h += '</tbody>';
+    grid.innerHTML = h;
+    ['resent', 'new', 'tools'].forEach(function (w) { if (open[w]) Array.prototype.forEach.call(grid.querySelectorAll('tr.sub-' + w), function (r) { r.classList.add('shown'); }); });
+    showTurn(selected);
+  }
+
+  function showTurn(i) {
+    selected = i;
+    Array.prototype.forEach.call(grid.querySelectorAll('.sel'), function (e) { e.classList.remove('sel'); });
+    if (i == null || !current || !current.turns[i]) { detail.innerHTML = ''; return; }
+    Array.prototype.forEach.call(grid.querySelectorAll('[data-turn="' + i + '"]'), function (e) { e.classList.add('sel'); });
+    var t = current.turns[i];
+    var h = '<h2>Turn ' + (i + 1) + ' — re-sent ' + fmt(t.cache_read) + ', new ' + fmt(t.cache_write) + ', output ' + fmt(t.output) + ' tokens</h2>';
+    if (t.text) h += '<p>' + esc(t.text) + '</p>';
+    h += '<ol>';
+    t.tools.forEach(function (x) {
+      if (x.kind === 'text') return;
+      h += '<li><span class="k">' + esc(x.kind) + (x.error ? ' ✗' : '') + '</span> <code>' + esc(x.detail) + '</code> <span class="k" style="min-width:0">→ ' + fmt(x.lines) + ' lines' + (x.files && x.files.length ? ', ' + x.files.length + ' file' + (x.files.length > 1 ? 's' : '') : '') + '</span></li>';
+    });
+    detail.innerHTML = h + '</ol>';
+  }
+
+  grid.addEventListener('mousemove', function (e) {
+    var c = e.target.closest('[data-tip]');
+    if (!c) { tip.style.display = 'none'; return; }
+    tip.textContent = c.getAttribute('data-tip');
+    tip.style.display = 'block';
+    var x = e.clientX + 14, y = e.clientY + 14;
+    if (x + 540 > window.innerWidth) x = Math.max(8, e.clientX - 530);
+    if (y + tip.offsetHeight > window.innerHeight) y = Math.max(8, e.clientY - tip.offsetHeight - 8);
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  });
+  grid.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  grid.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-toggle]');
+    if (b) {
+      var which = b.getAttribute('data-toggle');
+      open[which] = !open[which];
+      try { localStorage.setItem('trace-open', JSON.stringify(open)); } catch (err) {}
+      b.textContent = open[which] ? '\u25BE' : '\u25B8';
+      b.setAttribute('aria-expanded', open[which]);
+      b.closest('tr').classList.toggle('open', open[which]);
+      Array.prototype.forEach.call(grid.querySelectorAll('tr.sub-' + which), function (r) { r.classList.toggle('shown', open[which]); });
+      return;
+    }
+    var c = e.target.closest('[data-turn]');
+    if (c) showTurn(selected === +c.getAttribute('data-turn') ? null : +c.getAttribute('data-turn'));
+  });
+  hideHits.addEventListener('change', function () { if (current) render(current); });
+  cumulative.addEventListener('change', function () { if (current) render(current); });
+
+  EXAMPLES.forEach(function (ex, i) { var o = document.createElement('option'); o.value = i; o.textContent = ex.title; pick.appendChild(o); });
+  pick.addEventListener('change', function () { selected = null; render(EXAMPLES[+pick.value]); });
+
+  function loadFile(file) {
+    var r = new FileReader();
+    r.onload = function () {
+      try { var t = JSON.parse(r.result); if (!t.turns) throw new Error('no turns'); t.title = t.title || file.name; EXAMPLES.push(t);
+        var o = document.createElement('option'); o.value = EXAMPLES.length - 1; o.textContent = t.title; pick.appendChild(o); pick.value = o.value; selected = null; render(t);
+      } catch (err) { alert('Not a trace JSON: ' + err.message); }
+    };
+    r.readAsText(file);
+  }
+  document.getElementById('file').addEventListener('change', function (e) { if (e.target.files[0]) loadFile(e.target.files[0]); });
+  document.addEventListener('dragover', function (e) { e.preventDefault(); });
+  document.addEventListener('drop', function (e) { e.preventDefault(); if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+
+  var want = (location.hash || '').slice(1);
+  var idx = Math.max(0, EXAMPLES.findIndex(function (ex) { return ex.title === decodeURIComponent(want); }));
+  if (EXAMPLES.length) { pick.value = idx; render(EXAMPLES[idx]); }
+})();
+</script>
+</body>
+</html>
