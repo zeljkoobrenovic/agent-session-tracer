@@ -1,0 +1,39 @@
+LICENSE
+  s_0af420b20b4753::t_794014f8d7d443 1-21
+docs/index.html
+  s_0af420b20b4753::t_0a72678ebd4df5 1-340
+examples/haiku-t01-long-files.json
+  s_0af420b20b4753::t_f2a5f516ed837c 1-432
+examples/haiku-t01-split-files.json
+  s_0af420b20b4753::t_a2ead435a51950 1-471
+examples/sonnet-t01-long-files.json
+  s_0af420b20b4753::t_5e4a0e9c68f6c1 1-353
+examples/sonnet-t01-split-files.json
+  s_0af420b20b4753::t_11ae1452d11122 1-336
+template.html
+  s_0af420b20b4753::t_4f1fc46fca19b0 1-340
+turn_trace.py
+  s_0af420b20b4753::t_be7e6be46ebfee 1-368
+.gitignore
+  s_0af420b20b4753::t_107a4368b21186 1-3
+README.md
+  s_0af420b20b4753::t_c253a3be32135e 1-80
+build_page.py
+  s_0af420b20b4753::t_c814db102c595b 1-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9db8edaf31d49622bfeee9736b76415d67a6c9ed",
+  "prompts": {},
+  "sessions": {
+    "s_0af420b20b4753": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f8fc5201-db12-4f99-a873-2c992f5fc97e",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Zeljko Obrenovic <zeljkoobrenovic@yahoo.com>"
+    }
+  }
+}
