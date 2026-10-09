@@ -1,0 +1,27 @@
+.idea/.gitignore
+  s_ab74d5da50c01e::t_f8ba9926a8e5ee 1-8
+.idea/claude-session-tracer.iml
+  s_ab74d5da50c01e::t_0f786c398720e3 1-9
+.idea/misc.xml
+  s_ab74d5da50c01e::t_4d3ab604dc5317 1-6
+.idea/modules.xml
+  s_ab74d5da50c01e::t_cc991405a622d8 1-8
+.idea/vcs.xml
+  s_ab74d5da50c01e::t_a5f6c7b66d2d0d 1-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b5817c2db59196519bb3d148c28114bd91e9a50f",
+  "prompts": {},
+  "sessions": {
+    "s_ab74d5da50c01e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "921e9898-e2f9-41da-88be-f2c994c6836c",
+        "model": "unknown"
+      },
+      "human_author": "Zeljko Obrenovic <zeljkoobrenovic@yahoo.com>"
+    }
+  }
+}
