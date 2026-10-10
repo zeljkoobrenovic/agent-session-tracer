@@ -1,0 +1,19 @@
+README.md
+  s_7e2cafd0fddf42::t_c1e0b14afac3bc 66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4c76a5d84c2f12157e454d5e39fd906c68ad9e20",
+  "prompts": {},
+  "sessions": {
+    "s_7e2cafd0fddf42": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2e8d7813-8ffa-4170-8f6f-7b138ee71243",
+        "model": "unknown"
+      },
+      "human_author": "Zeljko Obrenovic <zeljkoobrenovic@yahoo.com>"
+    }
+  }
+}
