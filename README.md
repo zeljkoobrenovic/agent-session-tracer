@@ -113,11 +113,12 @@ cache writes is not modelled.
   length, and the first turn it appeared. Files seen only in search results are hidden by default. A file's length is
   the one the session saw (a `Read` reports the file's total lines, a `Write` its content), else the file counted on
   disk when the trace is made.
-- **Files map.** Under the grid, every file of the session as a circle whose area is its length, with the share of
-  its lines the agent read as a blue area inside and the share it edited as an orange one, so a small change to a long
-  file is a dot in a large circle and a rewrite fills it. Files of unknown length are dashed and sized by the lines
-  touched. Packed with a small routine in the page (no library), the file rows' filter applies, hover gives the
-  numbers, a click jumps to the file's row.
+- **Files map.** Under the grid, every file of the session as a circle whose area is its length, nested in the
+  circles of its folders (a chain of folders with nothing else in them is one circle), with the share of its lines
+  the agent read as a blue area inside and the share it edited as an orange one, so a small change to a long file is
+  a dot in a large circle and a rewrite fills it. Files of unknown length are dashed and sized by the lines touched.
+  Click a folder to zoom into it, its background or the breadcrumb to zoom out, a file to jump to its row; hover
+  gives the numbers; the file rows' filter applies. Packed and zoomed by a small routine in the page, no library.
 
 Hover a cell for details, click a turn to list its commands. All three token rows share one scale.
 

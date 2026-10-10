@@ -180,13 +180,22 @@ details.map summary:hover { text-decoration: underline; }
 details.map p.hint { margin: 6px 0 8px; }
 details.map .sw::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin: 0 4px 0 2px; vertical-align: -1px; background: var(--c); }
 .map-wrap { overflow: auto; }
-#map { display: block; max-width: 100%; }
-#map circle.file { fill: var(--surface-2); stroke: var(--border); stroke-width: 1; cursor: pointer; }
+#map { display: block; max-width: 100%; height: auto; cursor: zoom-out; }
+#map circle.dir { fill: var(--faint); fill-opacity: .07; stroke: var(--border); stroke-width: 1; cursor: zoom-in; }
+#map g.d:hover > circle.dir { stroke: var(--muted); }
+#map g.d.focus > circle.dir { cursor: zoom-out; }
+#map circle.file { fill: var(--surface); stroke: var(--border); stroke-width: 1; cursor: pointer; }
 #map circle.file.unknown { stroke-dasharray: 3 2; }
 #map circle.read { fill: var(--read); opacity: .35; pointer-events: none; }
 #map circle.edit { fill: var(--write); opacity: .9; pointer-events: none; }
 #map g.f:hover circle.file { stroke: var(--text); stroke-width: 1.5; }
-#map text { font-size: 10px; fill: var(--text); pointer-events: none; text-anchor: middle; dominant-baseline: central; }
+#map text { fill: var(--text); pointer-events: none; text-anchor: middle; dominant-baseline: central; }
+#map text.dl { fill: var(--muted); font-weight: 600; }
+.crumb { font-size: 13px; color: var(--muted); margin: 0 0 8px; }
+.crumb a { text-decoration: none; }
+.crumb a:hover { text-decoration: underline; }
+.crumb b { color: var(--text); font-weight: 600; }
+.crumb .sep { margin: 0 6px; color: var(--faint); }
 .grid tr.file.flash th.head, .grid tr.file.flash td { background: var(--sel); transition: background .6s; }
 .tip { position: fixed; z-index: 10; pointer-events: none; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 12px; max-width: 520px; box-shadow: 0 4px 16px rgba(0,0,0,.15); white-space: pre-wrap; word-break: break-word; display: none; }
 .dropzone { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; background: rgba(42,120,214,.12); backdrop-filter: blur(2px); border: 3px dashed var(--read); font-size: 22px; color: var(--text); pointer-events: none; }
@@ -241,7 +250,7 @@ a { color: var(--read); }
   <p><b>Re-sent from cache, new on top.</b> The blue bar grows every turn because the whole conversation so far is re-sent with each call. The thin slice on top is what the turn added, which the next turn re-sends in blue. Its light-blue base is the static prefix shared by all sessions, the fixed system prompt and the tool definitions, which the CLI keeps cached, so even the first call reads it rather than writing it. The cost of a session is mostly the area under the blue bars, so the number of turns and what each one appends matter more than any single read.</p>
   <p><b>New, written to cache.</b> That slice alone: the results of the tools the agent called last turn (orange, estimated at 2.3 characters per token, the rate measured on these transcripts), the agent's own previous words and tool calls (green), on the first turn the session setup (yellow: the session-specific system prompt sections, the skill and agent listings, CLAUDE.md, the task prompt) and later the per-turn reminders and instructions the CLI injects (grey).</p>
   <p><b>Files.</b> The bar above the grid sorts the file rows (first seen, lines read, edits, search hits, file size, name) and filters them by a part of their path; both are remembered in this browser. Lines attributed to a file are those in tool output: a <code>Read</code> or <code>cat/sed/head</code> of the file counts as read lines, an <code>Edit</code> as edited lines, a <code>grep</code> output line naming the file as a search hit. Files seen only in search results are hidden by default.</p>
-  <p><b>Files map.</b> Under the grid, every file of the session as a circle whose area is the file's length as the session saw it (a <code>Read</code> reports the total; otherwise the file is counted on disk when the trace is made). Inside, the share of the file's lines the agent read in blue and the share it edited in orange, both as areas, so the eye compares like with like: a small orange dot in a large circle is a small change to a long file. Files whose length is unknown are dashed and sized by the lines touched. The file rows' filter applies; click a circle to jump to its row.</p>
+  <p><b>Files map.</b> Under the grid, every file of the session as a circle whose area is the file's length as the session saw it (a <code>Read</code> reports the total; otherwise the file is counted on disk when the trace is made), nested in the circles of its folders (a chain of folders with nothing else in them is shown as one). Inside a file, the share of its lines the agent read in blue and the share it edited in orange, both as areas, so the eye compares like with like: a small orange dot in a large circle is a small change to a long file. Files whose length is unknown are dashed and sized by the lines touched. Click a folder to zoom into it, its background or a breadcrumb to zoom out, a file to jump to its row. The file rows' filter applies.</p>
   <p><b>Interacting.</b> Hover any cell or row label for details. Click a turn number or any cell in its column to list the turn's commands; <kbd>←</kbd> <kbd>→</kbd> step between turns, <kbd>Esc</kbd> closes. The ▸ next to a row label opens its breakdown.</p>
   <p><b>Codex sessions</b> look the same, read from <code>~/.codex/sessions</code>. The OpenAI API reports cached and uncached input rather than cache writes, so the orange row is "New, not from cache": the input tokens the call sent that were not served from the cache, the context it added, billed at the input rate. The output row includes the reasoning tokens. Edits come from the patches Codex applied, commands and their output from its command log.</p>
   <p><b>Live mode</b> (<code>serve.py</code>). The trace refreshes every few seconds. The session dropdown switches to any other session started in the same folder; "latest" keeps following, and picks up a new session when one starts. With "follow newest turn" on, each new turn is selected and scrolled into view, so the detail panel shows what the agent is doing now; picking another turn pauses that until you tick it again. While the tab is in the background its title counts the turns that arrived.</p>
@@ -281,8 +290,9 @@ a { color: var(--read); }
 <div class="grid-wrap"><table class="grid" id="grid" aria-label="Tokens, tool calls and files per turn"></table></div>
 <details class="map" id="mapBox" open>
   <summary>Files map <span class="hint" id="mapHint"></span></summary>
-  <p class="hint">Each circle is a file, its area the file's length as the session saw it (dashed: length unknown, sized by the lines touched). <span class="sw" style="--c: var(--read)"></span>the share of its lines read, <span class="sw" style="--c: var(--write)"></span>the share edited, both as areas, so a thin orange dot in a big circle is a small change in a long file. The file rows' filter applies. Hover for the numbers, click to jump to the file's row.</p>
-  <div class="map-wrap"><svg id="map" role="img" aria-label="Files of the session as circles"></svg></div>
+  <p class="hint">Files as circles, nested in their folders. A file's area is its length as the session saw it (dashed: length unknown, sized by the lines touched); inside, <span class="sw" style="--c: var(--read)"></span>the share of its lines read and <span class="sw" style="--c: var(--write)"></span>the share edited, both as areas, so a thin orange dot in a big circle is a small change in a long file. Click a folder to zoom in, the background to zoom out, a file to jump to its row; hover for the numbers. The file rows' filter applies.</p>
+  <div class="crumb" id="mapCrumb"></div>
+  <div class="map-wrap"><svg id="map" role="img" aria-label="Files of the session as circles, nested in their folders"></svg></div>
 </details>
 <section class="detail" id="detail" hidden aria-live="polite"></section>
 <section class="prompts" id="prompts" hidden></section>
@@ -727,15 +737,18 @@ a { color: var(--read); }
   ffilter.addEventListener('input', applyFiles);
   ffilter.addEventListener('keydown', function (e) { if (e.key === 'Escape') { ffilter.value = ''; applyFiles(); } e.stopPropagation(); });
 
-  // files map: one circle per file (area = lines), the share read in blue and the share edited in orange inside
-  var mapSvg = $('map'), mapHint = $('mapHint'), mapBox = $('mapBox');
+  // files map: the session's files as circles (area = lines) nested in their folders, the share read in blue and the
+  // share edited in orange inside each file; click a folder to zoom in, its background or the breadcrumb to zoom out
+  var mapSvg = $('map'), mapHint = $('mapHint'), mapBox = $('mapBox'), mapCrumb = $('mapCrumb');
+  var mapRoot = null, mapFocus = null, mapView = null, mapAnim = null, MAP_PX = 640;
   try { mapBox.open = localStorage.getItem('trace-map') !== 'closed'; } catch (e) {}
   mapBox.addEventListener('toggle', function () { try { localStorage.setItem('trace-map', mapBox.open ? 'open' : 'closed'); } catch (e) {} });
-  function packCircles(items) {
+  function packCircles(items) {  // positions around (0, 0): a phyllotaxis start, then collisions pushed apart
     var n = items.length, golden = Math.PI * (3 - Math.sqrt(5));
+    if (n === 1) { items[0].x = items[0].y = 0; return; }
     var area = items.reduce(function (a, c) { return a + c.r * c.r * Math.PI; }, 0), R = Math.sqrt(area / Math.PI) * 1.15;
     items.forEach(function (c, i) { var d = R * Math.sqrt((i + 0.5) / n), a = i * golden; c.x = d * Math.cos(a); c.y = d * Math.sin(a); });
-    for (var it = 0; it < (n > 600 ? 40 : 90); it++) {
+    for (var it = 0; it < (n > 600 ? 40 : 130); it++) {
       for (var i = 0; i < n; i++) {
         var a = items[i];
         for (var j = i + 1; j < n; j++) {
@@ -747,43 +760,144 @@ a { color: var(--read); }
           a.x -= dx * push; a.y -= dy * push; b.x += dx * push; b.y += dy * push;
         }
       }
-      items.forEach(function (c) { c.x *= 0.985; c.y *= 0.985; });  // a gentle pull to the middle keeps the pack round
+      items.forEach(function (c) { c.x *= 0.975; c.y *= 0.975; });
     }
+  }
+  function enclose(node) {  // the circle around the node's packed children: the centre walks toward the farthest child
+    var kids = node.kids, cx = 0, cy = 0, R = 0;
+    for (var it = 0; it < 80; it++) {
+      var far = null, fd = -1;
+      kids.forEach(function (k) { var d = Math.sqrt((k.x - cx) * (k.x - cx) + (k.y - cy) * (k.y - cy)) + k.r; if (d > fd) { fd = d; far = k; } });
+      R = fd;
+      var dx = far.x - cx, dy = far.y - cy, d0 = Math.sqrt(dx * dx + dy * dy) || 1, step = R * 0.08 * (1 - it / 80);
+      cx += dx / d0 * step; cy += dy / d0 * step;
+    }
+    kids.forEach(function (k) { k.x -= cx; k.y -= cy; });
+    node.r = R + Math.max(3, R * 0.04);
+  }
+  function buildTree(leaves) {
+    var root = {name: '', children: {}, files: [], folder: true};
+    leaves.forEach(function (c) {
+      var parts = c.f.path.split('/'), node = root;
+      for (var i = 0; i < parts.length - 1; i++) node = node.children[parts[i]] = node.children[parts[i]] || {name: parts[i], children: {}, files: [], folder: true};
+      c.name = parts[parts.length - 1];
+      node.files.push(c);
+    });
+    var id = 0;
+    function finish(node, depth, path) {
+      var kids = Object.keys(node.children).map(function (k) { return node.children[k]; });
+      while (kids.length === 1 && !node.files.length) {  // a chain of folders with nothing else in them collapses into one
+        var only = kids[0];
+        node.name = node.name ? node.name + '/' + only.name : only.name; node.files = only.files; node.children = only.children;
+        kids = Object.keys(node.children).map(function (k) { return node.children[k]; });
+      }
+      node.path = path ? path + '/' + node.name : node.name;
+      node.depth = depth; node.id = 'n' + (id++);
+      node.kids = kids.map(function (k) { return finish(k, depth + 1, node.path); }).concat(node.files);
+      node.kids.forEach(function (k) { if (!k.folder) { k.id = 'n' + (id++); k.depth = depth + 1; } k.parentId = node.id; });
+      node.count = node.kids.reduce(function (a, k) { return a + (k.folder ? k.count : 1); }, 0);
+      node.lines = node.kids.reduce(function (a, k) { return a + (k.folder ? k.lines : (k.known ? k.size : 0)); }, 0);
+      node.read = node.kids.reduce(function (a, k) { return a + (k.folder ? k.read : (k.f.read || 0)); }, 0);
+      node.edited = node.kids.reduce(function (a, k) { return a + (k.folder ? k.edited : (k.f.edits ? 1 : 0)); }, 0);
+      return node;
+    }
+    return finish(root, 0, '');
+  }
+  function layout(node) {
+    node.kids.forEach(function (k) { if (k.folder) layout(k); });
+    packCircles(node.kids);
+    enclose(node);
+  }
+  function absolute(node, ox, oy) {
+    node.ax = ox + (node.x || 0); node.ay = oy + (node.y || 0);
+    if (node.folder) node.kids.forEach(function (k) { absolute(k, node.ax, node.ay); });
+  }
+  function leafTip(c) {
+    var f = c.f, size = c.size;
+    return f.path + '\n' + (c.known ? fmt(f.lines) + ' lines' : 'length unknown') + (f.read ? ' · ' + fmt(f.read) + ' read' + (c.known ? ' (' + Math.round(100 * Math.min(f.read, size) / size) + '%)' : '') : ' · not read') +
+      (f.edits ? ' · ' + f.edits + ' edit' + (f.edits > 1 ? 's' : '') + (f.edit_lines ? ', ' + fmt(f.edit_lines) + ' lines' + (c.known ? ' (' + Math.round(100 * Math.min(f.edit_lines, size) / size) + '%)' : '') : '') : '') +
+      (f.hits ? ' · ' + f.hits + ' search hits' : '') + (f.first ? '\nfirst seen in turn ' + f.first : '');
+  }
+  function folderTip(n) {
+    return (n.path || 'all files') + '\n' + n.count + ' file' + (n.count === 1 ? '' : 's') + (n.lines ? ' · ' + fmt(n.lines) + ' lines' : '') + (n.read ? ' · ' + fmt(n.read) + ' lines read' : '') + (n.edited ? ' · ' + n.edited + ' edited' : '') + '\nclick to zoom in';
   }
   function renderMap() {
     if (!current) return;
     var q = ffilter.value.trim().toLowerCase();
     var files = current.files.filter(function (f) { return (!hideHits.checked || f.read || f.edits) && (!q || f.path.toLowerCase().indexOf(q) >= 0); });
     var edited = files.filter(function (f) { return f.edits; }).length, total = files.length;
-    files = files.map(function (f) {
+    var leaves = files.map(function (f) {
       var size = f.lines || 0, known = size > 0, touched = Math.max(f.read || 0, f.edit_lines || 0, 1);
       return {f: f, size: known ? size : touched, known: known};
     }).sort(function (a, b) { return b.size - a.size; }).slice(0, 1500);
-    if (!files.length) { mapSvg.innerHTML = ''; mapSvg.removeAttribute('viewBox'); mapHint.textContent = ' · no files'; return; }
-    var maxSize = files[0].size, k = 60 / Math.sqrt(maxSize);
-    files.forEach(function (c) { c.r = Math.max(4, Math.sqrt(c.size) * k); });
-    packCircles(files);
-    var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    files.forEach(function (c) { minX = Math.min(minX, c.x - c.r); minY = Math.min(minY, c.y - c.r); maxX = Math.max(maxX, c.x + c.r); maxY = Math.max(maxY, c.y + c.r); });
-    var pad = 4, W = maxX - minX + 2 * pad, H = maxY - minY + 2 * pad, width = Math.min(1068, Math.max(320, Math.round(W * 2.4)));
-    if (width * H / W > 640) width = Math.max(320, Math.round(640 * W / H));  // never taller than a screen
+    if (!leaves.length) { mapSvg.innerHTML = ''; mapCrumb.innerHTML = ''; mapRoot = mapFocus = null; mapHint.textContent = ' · no files'; return; }
+    var k = 60 / Math.sqrt(leaves[0].size);
+    leaves.forEach(function (c) { c.r = Math.max(4, Math.sqrt(c.size) * k); });
+    mapRoot = buildTree(leaves);
+    layout(mapRoot);
+    absolute(mapRoot, 0, 0);
     var h = '';
-    files.forEach(function (c) {
-      var f = c.f, size = c.size, rRead = f.read && c.known ? c.r * Math.sqrt(Math.min(f.read, size) / size) : 0;
-      var rEdit = f.edits ? (f.edit_lines && c.known ? Math.max(2.5, c.r * Math.sqrt(Math.min(f.edit_lines, size) / size)) : 2.5) : 0;
-      var tip = f.path + '\n' + (c.known ? fmt(f.lines) + ' lines' : 'length unknown') + (f.read ? ' · ' + fmt(f.read) + ' read' + (c.known ? ' (' + Math.round(100 * Math.min(f.read, size) / size) + '%)' : '') : ' · not read') +
-        (f.edits ? ' · ' + f.edits + ' edit' + (f.edits > 1 ? 's' : '') + (f.edit_lines ? ', ' + fmt(f.edit_lines) + ' lines' + (c.known ? ' (' + Math.round(100 * Math.min(f.edit_lines, size) / size) + '%)' : '') : '') : '') + (f.hits ? ' · ' + f.hits + ' search hits' : '') + (f.first ? '\nfirst seen in turn ' + f.first : '');
-      var x = (c.x - minX + pad).toFixed(1), y = (c.y - minY + pad).toFixed(1);
-      h += '<g class="f" data-path="' + esc(f.path) + '" data-tip="' + esc(tip) + '"><circle class="file' + (c.known ? '' : ' unknown') + '" cx="' + x + '" cy="' + y + '" r="' + c.r.toFixed(1) + '"></circle>';
-      if (rRead) h += '<circle class="read" cx="' + x + '" cy="' + y + '" r="' + rRead.toFixed(1) + '"></circle>';
-      if (rEdit) h += '<circle class="edit" cx="' + x + '" cy="' + y + '" r="' + rEdit.toFixed(1) + '"></circle>';
-      if (c.r >= 16) { var name = base(f.path), room = Math.floor(c.r * 2 / 5.6); if (name.length > room) name = name.slice(0, Math.max(3, room - 1)) + '…'; h += '<text x="' + x + '" y="' + y + '">' + esc(name) + '</text>'; }
-      h += '</g>';
-    });
-    mapSvg.setAttribute('viewBox', '0 0 ' + W.toFixed(1) + ' ' + H.toFixed(1));
-    mapSvg.setAttribute('width', width); mapSvg.setAttribute('height', Math.round(width * H / W));
+    (function draw(node) {
+      if (node.folder) {
+        h += '<g class="d" data-id="' + node.id + '" data-tip="' + esc(folderTip(node)) + '"><circle class="dir" cx="' + node.ax.toFixed(1) + '" cy="' + node.ay.toFixed(1) + '" r="' + node.r.toFixed(1) + '" vector-effect="non-scaling-stroke"></circle>' +
+          (node.depth ? '<text class="dl" data-r="' + node.r.toFixed(1) + '" data-parent="' + node.parentId + '" x="' + node.ax.toFixed(1) + '" y="' + (node.ay - node.r).toFixed(1) + '">' + esc(node.name) + '</text>' : '') + '</g>';
+        node.kids.forEach(draw);
+        return;
+      }
+      var f = node.f, size = node.size, x = node.ax.toFixed(1), y = node.ay.toFixed(1);
+      var rRead = f.read && node.known ? node.r * Math.sqrt(Math.min(f.read, size) / size) : 0;
+      var rEdit = f.edits ? (f.edit_lines && node.known ? Math.max(2.5, node.r * Math.sqrt(Math.min(f.edit_lines, size) / size)) : 2.5) : 0;
+      h += '<g class="f" data-id="' + node.id + '" data-path="' + esc(f.path) + '" data-tip="' + esc(leafTip(node)) + '"><circle class="file' + (node.known ? '' : ' unknown') + '" cx="' + x + '" cy="' + y + '" r="' + node.r.toFixed(1) + '" vector-effect="non-scaling-stroke"></circle>' +
+        (rRead ? '<circle class="read" cx="' + x + '" cy="' + y + '" r="' + rRead.toFixed(1) + '"></circle>' : '') +
+        (rEdit ? '<circle class="edit" cx="' + x + '" cy="' + y + '" r="' + rEdit.toFixed(1) + '"></circle>' : '') +
+        '<text class="fl" data-r="' + node.r.toFixed(1) + '" data-parent="' + node.parentId + '" x="' + x + '" y="' + y + '">' + esc(node.name) + '</text></g>';
+    })(mapRoot);
+    mapSvg.setAttribute('width', MAP_PX); mapSvg.setAttribute('height', MAP_PX);
     mapSvg.innerHTML = h;
-    mapHint.textContent = ' · ' + total + ' file' + (total === 1 ? '' : 's') + (edited ? ', ' + edited + ' edited' : '') + (total > files.length ? ', the ' + files.length + ' largest shown' : '');
+    var folders = 0; (function count(n) { if (n.folder && n.depth) folders++; if (n.folder) n.kids.forEach(count); })(mapRoot);
+    mapHint.textContent = ' · ' + total + ' file' + (total === 1 ? '' : 's') + (edited ? ', ' + edited + ' edited' : '') + (folders ? ', ' + folders + ' folder' + (folders === 1 ? '' : 's') : '') + (total > leaves.length ? ', the ' + leaves.length + ' largest shown' : '');
+    zoomTo(mapRoot, false);
+  }
+  function viewOf(node) { var m = node.r * 1.04; return [node.ax - m, node.ay - m, 2 * m]; }
+  function applyView(v) {
+    mapView = v;
+    mapSvg.setAttribute('viewBox', v[0].toFixed(2) + ' ' + v[1].toFixed(2) + ' ' + v[2].toFixed(2) + ' ' + v[2].toFixed(2));
+  }
+  function labels() {  // text keeps its screen size; folders are named one level below the focus, files where they have room
+    var scale = (mapSvg.clientWidth || MAP_PX) / mapView[2], fs = 11 / scale, focusId = mapFocus ? mapFocus.id : null;
+    Array.prototype.forEach.call(mapSvg.querySelectorAll('text'), function (t) {
+      var r = +t.getAttribute('data-r') * scale, dir = t.classList.contains('dl'), show = dir ? (r >= 24 && t.getAttribute('data-parent') === focusId) : r >= 15;
+      t.style.display = show ? '' : 'none';
+      if (!show) return;
+      t.setAttribute('font-size', fs.toFixed(3));
+      var name = t.textContent, full = t.getAttribute('data-full') || name;
+      t.setAttribute('data-full', full);
+      var room = Math.floor(2 * r / 6.2);
+      t.textContent = full.length > room ? full.slice(0, Math.max(2, room - 1)) + '…' : full;
+      if (dir) t.setAttribute('dy', (fs * 1.2).toFixed(3));
+    });
+  }
+  function crumbs(node) {
+    var chain = []; for (var n = node; n; n = n.parent) chain.unshift(n);
+    mapCrumb.innerHTML = chain.map(function (n, i) { return (i ? '<span class="sep">›</span>' : '') + (n === node ? '<b>' + esc(n.name || 'all files') + '</b>' : '<a href="#" data-zoom="' + n.id + '">' + esc(n.name || 'all files') + '</a>'); }).join('') +
+      (node.parent ? ' <span class="hint">· click the background to zoom out</span>' : '');
+  }
+  var byId = {};
+  function zoomTo(node, animate) {
+    if (!mapRoot) return;
+    byId = {}; (function index(n, parent) { byId[n.id] = n; n.parent = parent; if (n.folder) n.kids.forEach(function (k) { index(k, n); }); })(mapRoot, null);
+    mapFocus = node;
+    var target = viewOf(node), from = mapView;
+    Array.prototype.forEach.call(mapSvg.querySelectorAll('g.d'), function (g) { g.classList.toggle('focus', g.getAttribute('data-id') === node.id); });
+    crumbs(node);
+    if (mapAnim) clearTimeout(mapAnim);
+    if (!animate || !from) { applyView(target); labels(); return; }
+    var t0 = Date.now(), dur = 420;
+    (function step() {
+      var t = Math.min(1, (Date.now() - t0) / dur), e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      applyView([from[0] + (target[0] - from[0]) * e, from[1] + (target[1] - from[1]) * e, from[2] + (target[2] - from[2]) * e]);
+      if (t < 1) mapAnim = setTimeout(step, 16); else { mapAnim = null; labels(); }
+    })();
   }
   mapSvg.addEventListener('mousemove', function (e) {
     var g = e.target.closest('[data-tip]');
@@ -796,14 +910,21 @@ a { color: var(--read); }
   });
   mapSvg.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
   mapSvg.addEventListener('click', function (e) {
-    var g = e.target.closest('[data-path]');
-    if (!g) return;
-    var row = grid.querySelector('tr.file[data-path="' + g.getAttribute('data-path').replace(/"/g, '\\"') + '"]');
-    if (!row) return;
-    row.hidden = false;
-    row.scrollIntoView({block: 'center', behavior: 'smooth'});
-    row.classList.add('flash'); setTimeout(function () { row.classList.remove('flash'); }, 1800);
+    if (!mapRoot) return;
+    var g = e.target.closest('[data-id]'), node = g ? byId[g.getAttribute('data-id')] : null;
+    if (node && !node.folder) {  // a file: its row
+      var row = grid.querySelector('tr.file[data-path="' + g.getAttribute('data-path').replace(/"/g, '\\"') + '"]');
+      if (row) { row.hidden = false; row.scrollIntoView({block: 'center', behavior: 'smooth'}); row.classList.add('flash'); setTimeout(function () { row.classList.remove('flash'); }, 1800); }
+      return;
+    }
+    if (!node || node === mapFocus) { if (mapFocus.parent) zoomTo(mapFocus.parent, true); return; }  // the background or the focused folder: out
+    zoomTo(node, true);
   });
+  mapCrumb.addEventListener('click', function (e) {
+    var a = e.target.closest('[data-zoom]');
+    if (a) { e.preventDefault(); var n = byId[a.getAttribute('data-zoom')]; if (n) zoomTo(n, true); }
+  });
+  window.addEventListener('resize', function () { if (mapRoot && mapView) labels(); });
 
   function addOption(t) { var o = document.createElement('option'); o.value = EXAMPLES.indexOf(t); o.textContent = t.title; pick.appendChild(o); return o; }
   EXAMPLES.forEach(addOption);
