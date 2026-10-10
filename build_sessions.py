@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a sessions landscape: one page listing every Claude Code session of one or more folders (or of all of them)
+"""Build a sessions landscape: one page listing every Claude Code or Codex session of one or more folders (or of all of them)
 with its totals, and one trace page per session, which the table's rows open.
 
 Usage:
@@ -30,7 +30,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 def session_page(trace, out_dir, name, back_label):
     """Write the trace page of one session and return its file name."""
     nav = f'<p class="nav"><a href="index.html">← {turn_trace.html_escape(back_label)}</a></p>'
-    note = f"Built from the Claude Code transcript {turn_trace.html_escape((trace.get('meta') or {}).get('transcript') or name)}."
+    agent = "Codex" if trace.get("agent") == "codex" else "Claude Code"
+    note = f"Built from the agent's transcript {turn_trace.html_escape((trace.get('meta') or {}).get('transcript') or name)} ({agent})."
     page = turn_trace.fill_template("template.html", examples=[trace], nav=nav, note=note)
     page = page.replace('<span id="pickLabel">Example</span>', '<span id="pickLabel">Trace</span>')  # one trace, not an example
     with open(os.path.join(out_dir, name + ".html"), "w", encoding="utf-8") as f:
@@ -111,7 +112,7 @@ def main():
     rows.sort(key=lambda r: r.get("started") or "", reverse=True)
 
     note = (f"{len(rows)} session{'s' if len(rows) != 1 else ''} of {turn_trace.html_escape(title)}, built from the transcripts "
-            f"Claude Code keeps under ~/.claude/projects.")
+            f"the agents keep under ~/.claude/projects and ~/.codex/sessions.")
     page = turn_trace.fill_template("sessions_template.html", sessions={"title": title, "sessions": rows}, note=note)
     with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8") as f:
         f.write(page)

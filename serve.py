@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Live trace page: a local server that follows the latest Claude Code session of a folder and serves the trace page,
+"""Live trace page: a local server that follows the latest Claude Code or Codex session of a folder and serves the trace page,
 which refreshes it every few seconds while the session goes on.
 
 Usage:
@@ -112,13 +112,13 @@ class Tracer:
 def page(args):
     live = {"interval": args.interval, "cwd": args.cwd, "session": args.session}
     nav = '<p class="nav"><a href="sessions">\u2190 all sessions of this folder</a></p>'
-    return turn_trace.fill_template("template.html", live=live, nav=nav, note="Live from the transcripts in ~/.claude/projects.").encode("utf-8")
+    return turn_trace.fill_template("template.html", live=live, nav=nav, note="Live from the agents' transcripts under ~/.claude/projects and ~/.codex/sessions.").encode("utf-8")
 
 
 def sessions_page(args):
     live = {"interval": 30, "cwd": args.cwd}
     return turn_trace.fill_template("sessions_template.html", live=live,
-                                    note="Live from the transcripts in ~/.claude/projects; a row opens the session in the live trace page.").encode("utf-8")
+                                    note="Live from the agents' transcripts under ~/.claude/projects and ~/.codex/sessions; a row opens the session in the live trace page.").encode("utf-8")
 
 
 class Handler(BaseHTTPRequestHandler):
