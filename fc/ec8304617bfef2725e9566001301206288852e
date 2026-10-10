@@ -1,0 +1,29 @@
+docs/index.html
+  s_7e2cafd0fddf42::t_b3af17a457e2fe 89-90,99-100,143,153-159,183-185,214,257-258,263,294,296-304,308-309,334,605,615-616,755-765
+docs/sessions/haiku-t01-long-files.html
+  s_7e2cafd0fddf42::t_931667ffbb73bd 89-90,99-100,143,153-159,183-185,214,257-258,263,294,296-304,308-309,334,605,615-616,755-765
+docs/sessions/haiku-t01-split-files.html
+  s_7e2cafd0fddf42::t_00831f97f3bf5d 89-90,99-100,143,153-159,183-185,214,257-258,263,294,296-304,308-309,334,605,615-616,755-765
+docs/sessions/sonnet-t01-long-files.html
+  s_7e2cafd0fddf42::t_f987c47abd7eb2 89-90,99-100,143,153-159,183-185,214,257-258,263,294,296-304,308-309,334,605,615-616,755-765
+docs/sessions/sonnet-t01-split-files.html
+  s_7e2cafd0fddf42::t_c04febba19783a 89-90,99-100,143,153-159,183-185,214,257-258,263,294,296-304,308-309,334,605,615-616,755-765
+template.html
+  s_7e2cafd0fddf42::t_8c2f7aef7094f4 89-90,99-100,143,153-159,183-185,214,257-258,263,294,296-304,308-309,334,605,615-616,755-765
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fcec8304617bfef2725e9566001301206288852e",
+  "prompts": {},
+  "sessions": {
+    "s_7e2cafd0fddf42": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2e8d7813-8ffa-4170-8f6f-7b138ee71243",
+        "model": "unknown"
+      },
+      "human_author": "Zeljko Obrenovic <zeljkoobrenovic@yahoo.com>"
+    }
+  }
+}
