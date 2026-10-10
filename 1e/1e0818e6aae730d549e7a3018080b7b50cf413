@@ -1,0 +1,23 @@
+build_sessions.py
+  s_7e2cafd0fddf42::t_7038ddc8c3d1eb 2
+turn_trace.py
+  s_7e2cafd0fddf42::t_7038ddc8c3d1eb 5-8,128,359,691
+serve.py
+  s_7e2cafd0fddf42::t_7038ddc8c3d1eb 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1e1e0818e6aae730d549e7a3018080b7b50cf413",
+  "prompts": {},
+  "sessions": {
+    "s_7e2cafd0fddf42": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2e8d7813-8ffa-4170-8f6f-7b138ee71243",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Zeljko Obrenovic <zeljkoobrenovic@yahoo.com>"
+    }
+  }
+}
