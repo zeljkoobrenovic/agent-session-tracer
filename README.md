@@ -120,6 +120,8 @@ cache writes is not modelled.
   Click a folder to zoom into it, its background or the breadcrumb to zoom out, a file to jump to its row; hover
   gives the numbers; the file rows' filter applies. Packed and zoomed by a small routine in the page, no library.
 
+  ![The files map of a session: files as circles nested in their folders, the share of each file read in blue and edited in orange](images/files-map.png)
+
 Hover a cell for details, click a turn to list its commands. All three token rows share one scale.
 
 File attribution is heuristic: `Read`, `cat`, `sed -n`, `head` and `tail` of a path count as read lines; `Edit`,
