@@ -107,13 +107,13 @@ cache writes is not modelled.
 - **Seconds per turn.** The model's time (from the prompt or the previous tool result until the response finished
   streaming) and the time its tools then took, from the transcript's timestamps. Waits between prompts are not counted.
 - **Prompts.** Where each message you typed starts (a numbered mark and a column border); the turns up to the next
-  mark are the agent's answer to it. Hover the mark for the message. A table under the grid lists every prompt with
-  the tokens its turns caused, as a share of the session, with their time and cost.
+  mark are the agent's answer to it. Hover the mark for the message. The Prompts tab under the grid lists every prompt with
+  the tokens its turns caused, as a share of the session, with their time and cost; a row opens its first turn.
 - **Files.** Sortable (first seen, lines read, edits, hits, size, name) and filterable by path. One row per file: lines read (blue), edits (orange), search output lines naming it (dot or count), its
   length, and the first turn it appeared. Files seen only in search results are hidden by default. A file's length is
   the one the session saw (a `Read` reports the file's total lines, a `Write` its content), else the file counted on
   disk when the trace is made.
-- **Files map.** Under the grid, every file of the session as a circle whose area is its length, nested in the
+- **Files map.** The second tab under the grid: every file of the session as a circle whose area is its length, nested in the
   circles of its folders (a chain of folders with nothing else in them is one circle), with the share of its lines
   the agent read as a blue area inside and the share it edited as an orange one, so a small change to a long file is
   a dot in a large circle and a rewrite fills it. Files of unknown length are dashed and sized by the lines touched.
@@ -122,7 +122,8 @@ cache writes is not modelled.
 
   ![The files map of a session: files as circles nested in their folders, the share of each file read in blue and edited in orange](images/files-map.png)
 
-Hover a cell for details, click a turn to list its commands. All three token rows share one scale.
+Hover a cell for details, click a turn to list its commands in the panel beside the grid (below it when the grid
+needs the width; the grid's total column stays in view when it scrolls). All three token rows share one scale.
 
 File attribution is heuristic: `Read`, `cat`, `sed -n`, `head` and `tail` of a path count as read lines; `Edit`,
 `Write`, `sed -i`, a redirect into a file (`cat > f <<EOF`, `echo >> f`), `tee f` and a script fed through a heredoc
