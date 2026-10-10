@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agent Session Tracer</title>
-<link rel="icon" type="image/png" href="claude.png">
+<link rel="icon" type="image/png" href="agent.png">
 <meta name="description" content="What an AI coding agent reads, searches and edits in each turn, and what each turn re-sends from the cache, adds to it and produces.">
 <script>(function () { var th = 'light'; try { th = localStorage.getItem('trace-theme') || th; } catch (e) {} document.documentElement.setAttribute('data-theme', th === 'dark' || th === 'auto' ? th : 'light'); })();</script>
 <style>
@@ -228,7 +228,7 @@ a { color: var(--read); }
 <body>
 <main>
 <div class="top">
-  <span class="logos"><img class="logo" src="claude.png" alt="Claude Code" width="78" height="78"><img class="logo codex" src="codex.png" alt="Codex" width="78" height="78"></span>
+  <span class="logos"><img class="logo" src="agent.png" alt="Claude Code" width="78" height="78"></span>
   <div>
     <h1>Agent Session Tracer</h1>
     <p class="lead">What one coding agent session (Claude Code or Codex) cost, turn by turn: the context each API call re-sent from the prompt cache, what it added to it, what it produced, and the files the agent read, searched and edited along the way.</p>

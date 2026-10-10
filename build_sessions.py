@@ -116,7 +116,7 @@ def main():
     page = turn_trace.fill_template("sessions_template.html", sessions={"title": title, "sessions": rows}, note=note)
     with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8") as f:
         f.write(page)
-    for name in ("claude.png", "codex.png"):
+    for name in ("claude.png", "codex.png", 'agent.png'):
         logo = os.path.join(HERE, "docs", name)
         if os.path.isfile(logo):
             shutil.copy(logo, os.path.join(out_dir, name))
