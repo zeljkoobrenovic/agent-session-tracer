@@ -1,0 +1,23 @@
+build_sessions.py
+  s_783ad5fae2baa2::t_a74c6d81c42beb 119
+docs/index.html
+  s_783ad5fae2baa2::t_fe2c71778ae01e 231
+template.html
+  s_783ad5fae2baa2::t_d12d25afd669c4 7,231
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5d715cc3388a460ec16b46831cf16ff1c340a5ce",
+  "prompts": {},
+  "sessions": {
+    "s_783ad5fae2baa2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "85d50b89-c10a-440a-b45e-cb87a1c7dacc",
+        "model": "unknown"
+      },
+      "human_author": "Zeljko Obrenovic <zeljkoobrenovic@yahoo.com>"
+    }
+  }
+}
