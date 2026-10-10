@@ -93,6 +93,8 @@ cache writes is not modelled.
 
 ## What the page shows
 
+![The whole page with an embedded example: the example picker, the tiles of the session's totals, the legend, the turn grid with its tokens, seconds, tool calls and files, and the Prompts and Files map tabs below it](images/docs-page.png)
+
 - **Re-sent from cache, new on top.** The context each call read from the prompt cache (blue; its light-blue base is
   the static system prompt and tool definitions that every session shares), with what the call added stacked on top in
   the new-context colors. The breakdown rows split it into the shared prefix and the session's own history.
