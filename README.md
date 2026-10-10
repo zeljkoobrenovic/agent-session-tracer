@@ -1,7 +1,7 @@
 # Claude session tracer
 
-See what a Claude Code session cost, turn by turn: one column per API call, the tokens it re-sent from the prompt
-cache, wrote to it and produced, and the files the agent read, searched and edited in that turn.
+See what a Claude Code or Codex session cost, turn by turn: one column per API call, the tokens it re-sent from the
+prompt cache, wrote to it and produced, and the files the agent read, searched and edited in that turn.
 
 **Page:** https://zeljkoobrenovic.github.io/claude-session-tracer/ (example sessions embedded; drop your own trace on it);
 the same examples [as a sessions table](https://zeljkoobrenovic.github.io/claude-session-tracer/sessions/).
@@ -53,10 +53,10 @@ python3 build_sessions.py --all --out ~/claude-sessions    # every folder under 
 python3 build_sessions.py --all --since 2026-10-01 --min-turns 5   # recent, non-trivial ones only
 ```
 
-`build_sessions.py` writes a sessions page, `index.html`, with one row per session: when it started, the folder, the
-first prompt, the model, prompts, turns, cost, active time, tool calls, files read and edited, lines read, edits, the
+`build_sessions.py` writes a sessions page, `index.html`, with one row per session, Claude Code's and Codex's alike:
+when it started, the folder, the first prompt, the agent and model, prompts, turns, cost, active time, tool calls, files read and edited, lines read, edits, the
 tokens re-sent from the cache, new and output, and the session's span. Columns sort, the search box and the folder and
-model selects filter, the tiles and the footer row sum what is listed, and with several folders a table per folder
+agent and model selects filter, the tiles and the footer row sum what is listed, and with several folders a table per folder
 follows. Next to it, one trace page per session (`<session id>.html`, the page above with that session embedded and a
 link back), which the rows open. Everything is self-contained; the transcripts are read in parallel (`--jobs`), about a
 second per 50 MB of transcript. `--trace a.json` adds a trace extracted earlier instead of a transcript. The live
@@ -67,6 +67,26 @@ live trace page (`/?session=<id>`).
 
 Claude Code deletes transcripts after its `cleanupPeriodDays` (30 by default), so extract a trace in time or copy the
 transcript.
+
+### Codex sessions
+
+Codex CLI (and the VS Code extension) keeps a rollout file per session under
+`~/.codex/sessions/<year>/<month>/<day>/rollout-<time>-<id>.jsonl`, with a `token_usage_record` (or `token_count`
+event) per API call, the tool calls with their outputs, the commands it ran with their output and exit code, a
+unified diff per edited file, the user's messages and timestamps. `codex_trace.py` reads them, old (March 2026) and
+new (August 2026 on) layouts alike, into the same turns, so every command above takes them too: `--cwd` lists and
+extracts the Codex sessions started in a folder next to the Claude Code ones (`--agent codex` or `claude` keeps one
+kind), `--transcript` accepts a rollout file, `build_sessions.py --all` includes every Codex session, and `serve.py`
+follows the latest session of a folder whichever agent wrote it.
+
+The OpenAI API reports cached and uncached input instead of cache writes, so for a Codex trace the orange row is
+**"New, not from cache"**: the input tokens of the call that were not served from the cache, the context it added,
+billed at the input rate (`cache_write` in the trace; `input` is 0), while the blue row is the cached input. Output
+includes the reasoning tokens. Reads and searches come from the commands Codex ran, edits from the patches it applied
+(`FileChange` items, `patch_apply_end` events or the `apply_patch` call), web searches show as search calls. Prices
+for `gpt-5.4`, `gpt-5.5` and `gpt-6-astra` are the published list prices (cached input at 10%); `gpt-5.6-sol` comes
+from one secondary source and is marked so in `turn_trace.py`; the write premium GPT-6 Astra charges for explicit
+cache writes is not modelled.
 
 ## What the page shows
 

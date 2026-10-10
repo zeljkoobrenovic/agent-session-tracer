@@ -59,7 +59,8 @@ def extract(job):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--cwd", action="append", help="folder whose sessions to list (repeatable; default: the current folder)")
-    ap.add_argument("--all", action="store_true", help="every folder with transcripts under ~/.claude/projects")
+    ap.add_argument("--all", action="store_true", help="every session: all folders under ~/.claude/projects and all Codex sessions")
+    ap.add_argument("--agent", choices=["claude", "codex"], help="only that agent's sessions (default: both)")
     ap.add_argument("--trace", action="append", help="a trace JSON extracted earlier, instead of a transcript (repeatable)")
     ap.add_argument("--out", default="sessions", help="output folder (default: ./sessions)")
     ap.add_argument("--since", help="only sessions whose first API call is on or after this date (YYYY-MM-DD)")
@@ -73,17 +74,17 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
     transcripts, folders = [], []
     if args.all:
-        for d, files in turn_trace.project_folders():
+        for d, files in turn_trace.project_folders(args.agent):
             transcripts += files
             folders.append(os.path.basename(d))
     elif args.cwd or not args.trace:
         for cwd in args.cwd or [os.getcwd()]:
-            files = turn_trace.transcripts_for(cwd)
+            files = turn_trace.transcripts_for(cwd, args.agent)
             if not files:
                 print(f"no transcripts for {cwd} under {turn_trace.PROJECTS}", file=sys.stderr)
             transcripts += files
             folders.append(os.path.basename(os.path.abspath(cwd).rstrip("/")))
-    title = args.title or ("all folders" if args.all else ", ".join(folders) if folders else "traces")
+    title = args.title or ("all sessions" if args.all else ", ".join(folders) if folders else "traces")
     back = "all sessions" + (f" of {title}" if title and title != "traces" else "")
 
     rows, errors = [], []

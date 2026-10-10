@@ -199,7 +199,7 @@ a { color: var(--read); }
   <img class="logo" src="claude.png" alt="" width="78" height="78">
   <div>
     <h1>Claude Session Tracer</h1>
-    <p class="lead">What one Claude Code session cost, turn by turn: the context each API call re-sent from the prompt cache, what it added to it, what it produced, and the files the agent read, searched and edited along the way.</p>
+    <p class="lead">What one Claude Code or Codex session cost, turn by turn: the context each API call re-sent from the prompt cache, what it added to it, what it produced, and the files the agent read, searched and edited along the way.</p>
   </div>
   <button type="button" class="icon-btn" id="theme" title="Theme">☀</button>
 </div>
@@ -223,6 +223,7 @@ ${nav}
   <p><b>New, written to cache.</b> That slice alone: the results of the tools the agent called last turn (orange, estimated at 2.3 characters per token, the rate measured on these transcripts), the agent's own previous words and tool calls (green), on the first turn the session setup (yellow: the session-specific system prompt sections, the skill and agent listings, CLAUDE.md, the task prompt) and later the per-turn reminders and instructions the CLI injects (grey).</p>
   <p><b>Files.</b> The bar above the grid sorts the file rows (first seen, lines read, edits, search hits, file size, name) and filters them by a part of their path; both are remembered in this browser. Lines attributed to a file are those in tool output: a <code>Read</code> or <code>cat/sed/head</code> of the file counts as read lines, an <code>Edit</code> as edited lines, a <code>grep</code> output line naming the file as a search hit. Files seen only in search results are hidden by default.</p>
   <p><b>Interacting.</b> Hover any cell or row label for details. Click a turn number or any cell in its column to list the turn's commands; <kbd>←</kbd> <kbd>→</kbd> step between turns, <kbd>Esc</kbd> closes. The ▸ next to a row label opens its breakdown.</p>
+  <p><b>Codex sessions</b> look the same, read from <code>~/.codex/sessions</code>. The OpenAI API reports cached and uncached input rather than cache writes, so the orange row is "New, not from cache": the input tokens the call sent that were not served from the cache, the context it added, billed at the input rate. The output row includes the reasoning tokens. Edits come from the patches Codex applied, commands and their output from its command log.</p>
   <p><b>Live mode</b> (<code>serve.py</code>). The trace refreshes every few seconds. The session dropdown switches to any other session started in the same folder; "latest" keeps following, and picks up a new session when one starts. With "follow newest turn" on, each new turn is selected and scrolled into view, so the detail panel shows what the agent is doing now; picking another turn pauses that until you tick it again. While the tab is in the background its title counts the turns that arrived.</p>
   <p><b>Cost.</b> When the trace records what the run cost, that is shown; otherwise, and for live sessions, an estimate from the model's list prices: cache reads, cache writes (at the 1-hour rate Claude Code uses), uncached input and output, each at its own rate, per turn. Haiku 5.5's higher rate for prompts over 100K tokens is applied per turn. Prices are the ones published on 2026-10-09; the turn detail shows each turn's share.</p>
   <p><b>Seconds per turn.</b> Its own scale. Green is the model's time, from the prompt or the previous tool result until the response finished streaming; orange is the time its tools then took. The waits between your prompts are not counted, so the "active time" tile is how long the agent worked, not how long the session was open.</p>
@@ -407,6 +408,7 @@ ${nav}
     var calls = turns.reduce(function (a, t) { return a + t.tools.filter(function (x) { return x.kind !== 'text'; }).length; }, 0);
     var pk = priceKey(m.model || trace.model), est = pk ? turns.reduce(function (a, t) { return a + turnCost(t, pk); }, 0) : null;
     var title = '<div class="trace-title"><b>' + esc(trace.title) + '</b>' +
+      (trace.agent ? '<span class="sep">·</span><span>' + (trace.agent === 'codex' ? 'Codex' : 'Claude Code') + '</span>' : '') +
       (m.model || trace.model ? '<span class="sep">·</span><span>' + esc(m.model || trace.model) + '</span>' : '') +
       (m.task ? '<span class="sep">·</span><span>task ' + esc(m.task) + (m.kind || m.variant ? ' (' + esc(m.kind || '') + (m.kind && m.variant ? ', ' : '') + (m.variant ? 'variant ' + esc(m.variant) : '') + ')' : '') + '</span>' : '') + '</div>';
     summary.innerHTML = title + '<div class="tiles">' +
@@ -456,7 +458,7 @@ ${nav}
     h += tokenRow('shared prefix', '_prefix', 'var(--prefix)', turns, sum('_prefix'), max, 'sub sub-resent', '', 'prefix');
     h += tokenRow("this session's history", '_history', 'var(--read)', turns, sum('_history'), max, 'sub sub-resent', '', 'history');
     var hasNew = turns.some(function (t) { return t.new; });
-    h += tokenRow('New, written to cache', 'cache_write', 'var(--write)', turns, sum('cache_write'), max, hasNew ? 'parent' + (open.new ? ' open' : '') : '', hasNew ? toggle('new') : '', 'new');
+    h += tokenRow(trace.agent === 'codex' ? 'New, not from cache' : 'New, written to cache', 'cache_write', 'var(--write)', turns, sum('cache_write'), max, hasNew ? 'parent' + (open.new ? ' open' : '') : '', hasNew ? toggle('new') : '', 'new');
     if (hasNew) {
       var sumNew = function (k) { return turns.reduce(function (a, t) { return a + ((t.new || {})[k] || 0); }, 0); };
       h += tokenRow('tool results', 'new.tool_results', 'var(--write)', turns, sumNew('tool_results'), max, 'sub sub-new', '', 'tool_results');

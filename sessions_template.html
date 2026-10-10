@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Claude Sessions</title>
+<title>Agent Sessions</title>
 <link rel="icon" type="image/png" href="claude.png">
-<meta name="description" content="Every Claude Code session of a folder in one table: turns, prompts, tokens, cost and time, each row opening the session's turn-by-turn trace.">
+<meta name="description" content="Every Claude Code and Codex session of a folder in one table: turns, prompts, tokens, cost and time, each row opening the session's turn-by-turn trace.">
 <script>(function () { var th = 'light'; try { th = localStorage.getItem('trace-theme') || th; } catch (e) {} document.documentElement.setAttribute('data-theme', th === 'dark' || th === 'auto' ? th : 'light'); })();</script>
 <style>
 :root {
@@ -107,8 +107,8 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
 <div class="top">
   <img class="logo" src="claude.png" alt="" width="78" height="78">
   <div>
-    <h1>Claude Sessions <span class="hint" id="scope"></span></h1>
-    <p class="lead" id="lead">Every Claude Code session in one table: what each one took in turns, prompts, tokens, cost and time, and where the agent read and wrote. A row opens the session's turn-by-turn trace.</p>
+    <h1>Agent Sessions <span class="hint" id="scope"></span></h1>
+    <p class="lead" id="lead">Every Claude Code and Codex session in one table: what each one took in turns, prompts, tokens, cost and time, and where the agent read and wrote. A row opens the session's turn-by-turn trace.</p>
   </div>
   <button type="button" class="icon-btn" id="theme" title="Theme">☀</button>
 </div>
@@ -117,6 +117,7 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
 <div class="filters">
   <label>search <input type="search" id="q" placeholder="prompt, folder, model, id…" size="30"></label>
   <label id="folderWrap" hidden>folder <select id="folder"><option value="">all</option></select></label>
+  <label id="agentWrap" hidden>agent <select id="agent"><option value="">all</option></select></label>
   <label id="modelWrap" hidden>model <select id="model"><option value="">all</option></select></label>
   <label title="Sessions with fewer than this many API calls, such as one-line questions and aborted starts"><input type="checkbox" id="hideShort"> hide sessions under <input type="number" id="minTurns" value="5" min="1" max="999" style="width:58px"> turns</label>
   <span class="hint" id="count"></span>
@@ -128,7 +129,7 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
 
 <details class="help">
   <summary>How to read this table</summary>
-  <p>One row per session, that is one Claude Code transcript: interactive sessions and <code>claude -p</code> runs alike. Click a column heading to sort, type in the search box to filter (prompt, folder, model and session id are searched), pick a folder or a model; the tiles sum what is listed. A row opens the session in the trace page, turn by turn.</p>
+  <p>One row per session, that is one transcript of Claude Code (interactive sessions and <code>claude -p</code> runs alike) or of Codex (its rollout files under <code>~/.codex/sessions</code>). Click a column heading to sort, type in the search box to filter (prompt, folder, model and session id are searched), pick a folder or a model; the tiles sum what is listed. A row opens the session in the trace page, turn by turn.</p>
   <p><b>Prompts</b> are the messages you typed; <b>turns</b> the API calls they took. <b>Re-sent</b> is the context read from the prompt cache over all turns, the whole conversation re-sent with each call, which is where most of a session's tokens go. <b>New</b> is what the calls added to it (tool results, the agent's own words, the setup and the reminders) plus the few tokens sent uncached; <b>output</b> what the model wrote. <b>Files</b> counts the files read and edited, <b>lines read</b> the lines of those files that tool output returned, <b>edits</b> the edit calls.</p>
   <p><b>Cost</b> is the recorded cost when the trace has one, otherwise an estimate at list prices (${prices_date}: cache reads, 1-hour cache writes, uncached input, output), shown in grey. The bar is the share of the most expensive listed session. <b>Active</b> time is the model's time plus its tools' time, without the waits between your prompts; <b>span</b> runs from the first API call to the last.</p>
   <p>Built from the transcripts Claude Code keeps under <code>~/.claude/projects</code> (deleted after 30 days by default) with <code>build_sessions.py</code> from the <a href="https://github.com/zeljkoobrenovic/claude-session-tracer">claude-session-tracer</a> repository; <code>serve.py</code> serves the same table live.</p>
@@ -144,7 +145,7 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
   var DATA = null; try { DATA = JSON.parse($('data').textContent); } catch (e) {}
   var LIVE = null; try { LIVE = JSON.parse($('liveConfig').textContent); } catch (e) {}
   var rows = (DATA && DATA.sessions) || [], TITLE = (DATA && DATA.title) || '';
-  var table = $('table'), tiles = $('tiles'), q = $('q'), folderSel = $('folder'), modelSel = $('model'), hideShort = $('hideShort'), minTurns = $('minTurns'), count = $('count');
+  var table = $('table'), tiles = $('tiles'), q = $('q'), folderSel = $('folder'), modelSel = $('model'), agentSel = $('agent'), hideShort = $('hideShort'), minTurns = $('minTurns'), count = $('count');
   var sortKey = 'started', sortDir = -1;
 
   var THEMES = ['light', 'dark', 'auto'], ICON = {light: '☀', dark: '☾', auto: '◐'}, NAME = {light: 'light', dark: 'dark', auto: 'auto (follows the system)'};
@@ -171,6 +172,7 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
     {k: 'folder', l: 'folder', cls: 'folder', v: function (r) { return r.folder || ''; }, h: function (r) { return esc(r.folder); }, tip: function (r) { return r.cwd; }},
     {k: 'id', l: 'session', cls: 'id', v: function (r) { return r.id; }, h: function (r) { return '<a href="' + esc(r.page || '#') + '">' + esc(r.id.length === 36 ? r.id.slice(0, 8) : r.id) + '</a>'; }, tip: function (r) { return r.id + (r.title && r.title !== r.id && r.title !== r.first_prompt ? '\n' + r.title : ''); }},
     {k: 'first_prompt', l: 'first prompt', cls: 'prompt', v: function (r) { return r.first_prompt || ''; }, h: function (r) { return r.first_prompt ? esc(r.first_prompt) : '<span class="hint">(none)</span>'; }, tip: function (r) { return r.first_prompt; }},
+    {k: 'agent', l: 'agent', cls: 'model', v: function (r) { return r.agent || 'claude'; }, h: function (r) { return r.agent === 'codex' ? 'Codex' : 'Claude'; }},
     {k: 'model', l: 'model', cls: 'model', v: function (r) { return r.model || ''; }, h: function (r) { return esc(shortModel(r.model)); }, tip: function (r) { return r.model; }},
     {k: 'prompts', l: 'prompts', num: true, v: function (r) { return r.prompts || 0; }},
     {k: 'turns', l: 'turns', num: true, v: function (r) { return r.turns || 0; }},
@@ -201,17 +203,19 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
     var folders = counts('folder'), models = counts('model');
     $('folderWrap').hidden = folders.length < 2; options(folderSel, folders, function (v) { return v; });
     $('modelWrap').hidden = models.length < 2; options(modelSel, models, function (v) { return shortModel(v); });
+    var agents = counts('agent'); $('agentWrap').hidden = agents.length < 2; options(agentSel, agents, function (v) { return v === 'codex' ? 'Codex' : 'Claude Code'; });
     $('scope').textContent = TITLE ? '· ' + TITLE : '';
-    if (TITLE) document.title = 'Claude Sessions · ' + TITLE;
+    if (TITLE) document.title = 'Agent Sessions · ' + TITLE;
   }
 
   function filtered() {
-    var text = q.value.trim().toLowerCase(), f = folderSel.value, m = modelSel.value, min = hideShort.checked ? Math.max(1, +minTurns.value || 1) : 0;
+    var text = q.value.trim().toLowerCase(), f = folderSel.value, m = modelSel.value, ag = agentSel.value, min = hideShort.checked ? Math.max(1, +minTurns.value || 1) : 0;
     return rows.filter(function (r) {
       if (f && r.folder !== f) return false;
+      if (ag && (r.agent || 'claude') !== ag) return false;
       if (m && r.model !== m) return false;
       if (min && (r.turns || 0) < min) return false;
-      if (text) { var hay = [r.first_prompt, r.folder, r.cwd, r.model, r.id, r.title].join(' ').toLowerCase(); if (hay.indexOf(text) < 0) return false; }
+      if (text) { var hay = [r.first_prompt, r.folder, r.cwd, r.model, r.id, r.title, r.agent].join(' ').toLowerCase(); if (hay.indexOf(text) < 0) return false; }
       return true;
     });
   }
@@ -238,15 +242,15 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
       tile('files edited', fmt(sum(list, function (r) { return r.files_edited; })), fmt(sum(list, function (r) { return r.edits; })) + ' edits · ' + fmt(sum(list, function (r) { return r.lines_read; })) + ' lines read');
     count.textContent = list.length === rows.length ? '' : list.length + ' of ' + rows.length + ' sessions';
     var ctx = {maxCost: Math.max.apply(null, costs.concat([0]))};
-    var showFolder = counts('folder').length > 1;
+    var showFolder = counts('folder').length > 1, showAgent = counts('agent').length > 1;
     var h = '<thead><tr>' + COLS.map(function (c) {
-      if (c.k === 'folder' && !showFolder) return '';
+      if ((c.k === 'folder' && !showFolder) || (c.k === 'agent' && !showAgent)) return '';
       return '<th class="' + (c.num ? 'num' : '') + (c.k === sortKey ? ' on' : '') + '" data-sort="' + c.k + '">' + esc(c.l) + (c.k === sortKey ? '<span class="arr">' + (sortDir > 0 ? '▲' : '▼') + '</span>' : '') + '</th>';
     }).join('') + '</tr></thead><tbody>';
     if (!list.length) h += '<tr><td colspan="' + COLS.length + '" class="empty">' + (rows.length ? 'No session matches the filters.' : 'No sessions.') + '</td></tr>';
     list.forEach(function (r) {
       h += '<tr data-page="' + esc(r.page || '') + '">' + COLS.map(function (c) {
-        if (c.k === 'folder' && !showFolder) return '';
+        if ((c.k === 'folder' && !showFolder) || (c.k === 'agent' && !showAgent)) return '';
         var tip = c.tip ? c.tip(r) : '';
         return '<td class="' + (c.num ? 'num ' : '') + (c.cls || '') + (c.cls2 ? ' ' + c.cls2(r) : '') + '"' + (tip ? ' title="' + esc(tip) + '"' : '') + '>' + (c.h ? c.h(r, ctx) : fmt(c.v(r))) + '</td>';
       }).join('') + '</tr>';
@@ -254,7 +258,7 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
     h += '</tbody>';
     if (list.length > 1) {
       h += '<tfoot><tr>' + COLS.map(function (c) {
-        if (c.k === 'folder' && !showFolder) return '';
+        if ((c.k === 'folder' && !showFolder) || (c.k === 'agent' && !showAgent)) return '';
         var v;
         if (c.k === 'started') v = list.length + ' sessions';
         else if (c.k === 'files') v = fmt(sum(list, function (r) { return r.files_read; })) + ' / ' + fmt(sum(list, function (r) { return r.files_edited; }));
@@ -301,7 +305,7 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
     var tr = e.target.closest('tr[data-folder]');
     if (tr) { folderSel.value = tr.getAttribute('data-folder'); if (folderSel.value !== tr.getAttribute('data-folder')) folderSel.value = ''; render(); window.scrollTo({top: 0, behavior: 'smooth'}); }
   });
-  [q, folderSel, modelSel, hideShort, minTurns].forEach(function (el) { el.addEventListener(el === q || el === minTurns ? 'input' : 'change', render); });
+  [q, folderSel, modelSel, agentSel, hideShort, minTurns].forEach(function (el) { el.addEventListener(el === q || el === minTurns ? 'input' : 'change', render); });
   q.addEventListener('keydown', function (e) { if (e.key === 'Escape') { q.value = ''; render(); } });
   try { var saved = JSON.parse(localStorage.getItem('sessions-view') || '{}'); if (saved.hideShort) hideShort.checked = true; if (saved.minTurns) minTurns.value = saved.minTurns; if (saved.sortKey && byKey[saved.sortKey]) { sortKey = saved.sortKey; sortDir = saved.sortDir || -1; } } catch (e) {}
   var _render = render;

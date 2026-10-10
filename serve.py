@@ -47,7 +47,7 @@ class Tracer:
         files = turn_trace.transcripts_for(self.args.cwd)
         want = session or self.args.session
         if want:
-            files = [f for f in files if os.path.basename(f).startswith(want)]
+            files = [f for f in files if turn_trace.transcript_id(f).startswith(want)]
         return files[-1] if files else None
 
     def trace(self, session=None):
@@ -70,7 +70,7 @@ class Tracer:
         key = (path, st.st_mtime_ns, st.st_size)
         entry = self.docs.get(path)
         if entry is None or entry[0] != key:
-            sid = os.path.basename(path)[:8]
+            sid = turn_trace.transcript_id(path)[:8]
             title = self.args.title or f"{os.path.basename(self.args.cwd.rstrip('/'))} \u00B7 session {sid}"
             doc = turn_trace.trace_for(path, root=self.args.root, source_root=self.args.source_root, title=title)
             doc["live"] = {"transcript": path, "updated": datetime.datetime.now().isoformat(timespec="seconds")}

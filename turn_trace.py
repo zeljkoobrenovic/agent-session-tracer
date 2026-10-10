@@ -25,6 +25,8 @@ import shlex
 import sys
 from collections import defaultdict
 
+import codex_trace
+
 PROJECTS = os.path.expanduser("~/.claude/projects")
 
 TRACE_FORMAT = """
@@ -77,6 +79,12 @@ PRICES = {
     "claude-haiku-5-5": [0.1, 0.125, 0.2, 0.01, 0.5],
     "claude-haiku-5-5:long": [0.5, 0.625, 1, 0.05, 2.5],  # Haiku 5.5: a request whose prompt exceeds 100K tokens pays this row
     "claude-haiku-4-5": [1, 1.25, 2, 0.1, 5], "claude-haiku-3-5": [0.8, 1, 1.6, 0.08, 4],
+    # OpenAI models (Codex): no cache-write charge, so the uncached input (kept in cache_write for Codex traces) is at
+    # the input rate; the write premium GPT-6 Astra charges on explicit cache writes is not modelled. Cached input at
+    # 10% of input. gpt-5.4 and gpt-5.5 from openai.com/api/pricing; gpt-6-astra from the launch pricing (2026-10);
+    # gpt-5.6-sol from one secondary source, unverified.
+    "gpt-6-astra": [10, 10, 10, 1, 50], "gpt-5.6-sol": [4, 4, 4, 0.4, 20],
+    "gpt-5.5": [5, 5, 5, 0.5, 30], "gpt-5.4": [2.5, 2.5, 2.5, 0.25, 15],
 }
 PRICE_KEYS = sorted((k for k in PRICES if ":" not in k), key=len, reverse=True)
 
@@ -85,9 +93,8 @@ def price_key(model):
     """The price row of a model id, also with a date suffix or a cloud prefix; None when unknown."""
     m = str(model or "")
     i = m.find("claude-")
-    if i < 0:
-        return None
-    m = m[i:]
+    if i > 0:  # a cloud prefix (us.anthropic.claude-...)
+        m = m[i:]
     for k in PRICE_KEYS:
         if m == k or m.startswith(k + "-"):
             return k
@@ -110,24 +117,46 @@ def estimate_cost(turns, model):
     return round(sum(turn_cost(t, key) for t in turns), 6)
 
 
-def transcripts_for(cwd):
+def claude_transcripts_for(cwd):
     slug = re.sub(r"[^A-Za-z0-9]", "-", os.path.abspath(cwd))
     return sorted(glob.glob(os.path.join(PROJECTS, slug, "*.jsonl")), key=os.path.getmtime)
+
+
+def transcripts_for(cwd, agent=None):
+    """The transcripts of the sessions started in cwd, Claude Code's and Codex's, oldest first by modification time;
+    agent = "claude" or "codex" keeps one kind."""
+    files = []
+    if agent in (None, "claude"):
+        files += claude_transcripts_for(cwd)
+    if agent in (None, "codex"):
+        files += codex_trace.transcripts(cwd)
+    return sorted(files, key=os.path.getmtime)
+
+
+def agent_of(transcript):
+    """"codex" for a Codex rollout file, else "claude"."""
+    return "codex" if transcript.startswith(codex_trace.CODEX_SESSIONS) or codex_trace.is_codex_transcript(transcript) else "claude"
+
+
+def transcript_id(transcript):
+    return codex_trace.session_id(transcript) if agent_of(transcript) == "codex" else os.path.basename(transcript)[:-6]
 
 
 def find_transcript(args):
     if args.transcript:
         return args.transcript
-    files = transcripts_for(args.cwd)
+    files = transcripts_for(args.cwd, getattr(args, "agent", None))
     if getattr(args, "session", None):
-        files = [f for f in files if os.path.basename(f).startswith(args.session)]
+        files = [f for f in files if transcript_id(f).startswith(args.session)]
     if not files:
             sys.exit(f"no transcript for {args.cwd} under {PROJECTS}")
     return files[-1]
 
 
 def session_summary(f):
-    """One transcript in a line: id, start time, API calls, first prompt."""
+    """One transcript in a line: id, start time, API calls, first prompt, agent."""
+    if agent_of(f) == "codex":
+        return codex_summary(f)
     first, calls, started = "", set(), None
     for line in open(f, encoding="utf-8"):
         try:
@@ -139,18 +168,38 @@ def session_summary(f):
             started = o.get("timestamp", "")[:16].replace("T", " ")
         elif o.get("type") == "assistant":
             calls.add((o.get("message") or {}).get("id") or o.get("requestId") or len(calls))
-    return {"id": os.path.basename(f)[:-6], "started": started or "", "calls": len(calls), "prompt": first, "path": f}
+    return {"id": os.path.basename(f)[:-6], "started": started or "", "calls": len(calls), "prompt": first, "path": f, "agent": "claude"}
 
 
-def sessions_of(cwd):
+def codex_summary(f):
+    meta = codex_trace.session_meta(f)
+    first, records, counts = "", 0, 0
+    for line in open(f, encoding="utf-8"):
+        try:
+            o = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        p = o.get("payload") or {}
+        if o.get("type") == "response_item" and p.get("type") == "message" and p.get("role") == "user" and not first:
+            first = (codex_trace.user_text(p) or "")[:70]
+        elif o.get("type") == "token_usage_record":
+            records += 1
+        elif o.get("type") == "event_msg" and p.get("type") == "token_count" and (p.get("info") or {}).get("last_token_usage"):
+            counts += 1
+    calls = records or counts  # newer files have both, one of each per API call
+    started = (meta.get("timestamp") or "")[:16].replace("T", " ")
+    return {"id": codex_trace.session_id(f), "started": started, "calls": calls, "prompt": first, "path": f, "agent": "codex"}
+
+
+def sessions_of(cwd, agent=None):
     """The sessions started in cwd, newest first."""
-    return [session_summary(f) for f in reversed(transcripts_for(cwd))]
+    return [session_summary(f) for f in reversed(transcripts_for(cwd, agent))]
 
 
 def list_sessions(cwd):
     """Print the sessions started in cwd, newest first: id, start time, API calls, first prompt."""
     for s in sessions_of(cwd):
-        print(f"{s['id']}  {s['started']:16}  {s['calls']:4} calls  {s['prompt']}")
+        print(f"{s['id']}  {s['agent']:6}  {s['started']:16}  {s['calls']:4} calls  {s['prompt']}")
 
 
 def result_text(block):
@@ -209,8 +258,8 @@ def load(transcript):
             pending = prompt
             if now:
                 last_user = now
-        if t == "assistant" and not model and (o.get("message") or {}).get("model"):
-            model = o["message"]["model"]
+        if t == "assistant" and not model and (o.get("message") or {}).get("model") and not o["message"]["model"].startswith("<"):
+            model = o["message"]["model"]  # "<synthetic>" marks the CLI's own messages, not a model
         m = o.get("message") or {}
         content = m.get("content")
         if t == "assistant" and isinstance(content, list):
@@ -417,7 +466,9 @@ def analyze_bash(command, out, root, cwd=""):
 
 def count_patch_lines(structured):
     n = 0
-    for hunk in (structured or {}).get("structuredPatch") or []:
+    if not isinstance(structured, dict):  # an error message instead of the patch
+        return 0
+    for hunk in structured.get("structuredPatch") or []:
         n += sum(1 for l in hunk.get("lines", []) if l.startswith("+"))
     return n
 
@@ -440,11 +491,32 @@ def build(turns, results, root, source_root):
         for use in turn.pop("_uses"):
             name, inp = use.get("name"), use.get("input") or {}
             res = results.get(use.get("id"), {"text": "", "error": False, "structured": None})
+            if "shell" in use:  # a command another agent ran, with its output (codex_trace): classified like a Bash call
+                command, out, failed = use["shell"][:3]
+                res = {"text": out, "error": failed, "structured": None}
+                use = {"name": "Bash", "input": {"command": command}, "_cwd": use["shell"][3] if len(use["shell"]) > 3 else None}
+                name, inp = "Bash", use["input"]
+            elif "entry" in use:  # a ready-made entry (edits from a patch, a web search, a plan update)
+                out = use.get("result_text") or ""
+                entry = dict(use["entry"])
+                entry["files"] = [dict(f, path=rel(f["path"], root)) for f in entry.get("files") or []]
+                if entry["kind"] in ("edit", "read") and entry["files"]:
+                    entry["detail"] = entry["files"][0]["path"]
+                turn["result_chars"] += len(out)
+                if entry.get("error"):
+                    entry["files"] = []
+                for f in entry["files"]:
+                    touch(f["path"], f["kind"], f["lines"], turn["n"])
+                turn["tools"].append(entry)
+                continue
             out = res["text"]
             entry = {"tool": name, "kind": "shell", "detail": "", "lines": len(out.splitlines()), "files": []}
             if res["error"]:
                 entry["error"] = True
-            if name == "Bash":
+            if name == "Bash" and use.get("_cwd") is not None:  # the agent gave the command its own working directory
+                entry["detail"] = inp.get("command", "")
+                entry["kind"], entry["files"], entry["lines"], _ = analyze_bash(entry["detail"], out, root, rel(use["_cwd"], root) if use["_cwd"] else "")
+            elif name == "Bash":
                 entry["detail"] = inp.get("command", "")
                 entry["kind"], entry["files"], entry["lines"], new_cwd = analyze_bash(entry["detail"], out, root, cwd)
                 if not res["error"]:
@@ -502,9 +574,10 @@ def build(turns, results, root, source_root):
 def trace_for(transcript, root=None, source_root=None, title=None):
     """The trace document of one transcript (see TRACE_FORMAT). root shortens file paths (default: the session's cwd);
     source_root says where the files are now, for their line counts (default: root)."""
-    turns, results, cwd, model = load(transcript)
+    agent = agent_of(transcript)
+    turns, results, cwd, model = (codex_trace.load if agent == "codex" else load)(transcript)
     prefix = (root or cwd or "").rstrip("/") + "/"
-    meta = {"transcript": os.path.basename(transcript), "cwd": cwd, "turns": len(turns),
+    meta = {"transcript": os.path.basename(transcript), "cwd": cwd, "turns": len(turns), "agent": agent,
             "cache_read_tokens": sum(t["cache_read"] for t in turns), "cache_write_tokens": sum(t["cache_write"] for t in turns),
             "input_tokens": sum(t["input"] for t in turns), "output_tokens": sum(t["output"] for t in turns), "model": model}
     timed = [t for t in turns if t.get("seconds")]
@@ -519,7 +592,7 @@ def trace_for(transcript, root=None, source_root=None, title=None):
     if cost is not None:
         meta["cost_estimate_usd"] = cost
     files = build(turns, results, prefix, source_root or root or cwd)
-    return {"title": title or os.path.basename(transcript)[:8] + " · " + (cwd or ""), "model": model,
+    return {"title": title or transcript_id(transcript)[:8] + " · " + (cwd or ""), "model": model, "agent": agent,
             "meta": meta, "shared_prefix": turns[0]["cache_read"] if turns else 0, "turns": turns, "files": files}
 
 
@@ -538,7 +611,10 @@ def session_stats(trace, transcript=None):
             pass
     sid = (m.get("transcript") or os.path.basename(transcript or "") or trace.get("title") or "")
     sid = sid[:-6] if sid.endswith(".jsonl") else sid
+    if m.get("transcript", "").startswith("rollout-"):
+        sid = codex_trace.session_id(m["transcript"])
     row = {"id": sid, "title": trace.get("title") or sid, "cwd": cwd, "folder": os.path.basename(cwd.rstrip("/")) or cwd,
+           "agent": trace.get("agent") or m.get("agent") or "claude",
            "model": m.get("model") or trace.get("model") or "", "started": started, "ended": ended, "span_s": span,
            "turns": len(turns), "prompts": sum(1 for t in turns if t.get("prompt")), "first_prompt": first,
            "tool_calls": sum(1 for t in turns for x in t.get("tools") or [] if x.get("kind") != "text"),
@@ -553,13 +629,19 @@ def session_stats(trace, transcript=None):
     return row
 
 
-def project_folders():
-    """Every folder under ~/.claude/projects that holds transcripts, newest first, with its transcripts."""
+def project_folders(agent=None):
+    """Every folder under ~/.claude/projects that holds transcripts, newest first, with its transcripts; with Codex's
+    sessions folder (all of them in one entry) unless agent = "claude"."""
     out = []
-    for d in glob.glob(os.path.join(PROJECTS, "*")):
-        files = sorted(glob.glob(os.path.join(d, "*.jsonl")), key=os.path.getmtime)
+    if agent in (None, "claude"):
+        for d in glob.glob(os.path.join(PROJECTS, "*")):
+            files = sorted(glob.glob(os.path.join(d, "*.jsonl")), key=os.path.getmtime)
+            if files:
+                out.append((d, files))
+    if agent in (None, "codex"):
+        files = codex_trace.transcripts()
         if files:
-            out.append((d, files))
+            out.append((codex_trace.CODEX_SESSIONS, files))
     return sorted(out, key=lambda x: os.path.getmtime(x[1][-1]), reverse=True)
 
 
@@ -596,6 +678,7 @@ def main():
     ap.add_argument("--transcript", help="a Claude Code session transcript (.jsonl)")
     ap.add_argument("--cwd", help="folder the session was started in (latest transcript, or the one given with --session)")
     ap.add_argument("--session", help="session id (or a prefix of it) among the sessions of --cwd; see --list")
+    ap.add_argument("--agent", choices=["claude", "codex"], help="only that agent's sessions of --cwd (default: both)")
     ap.add_argument("--list", action="store_true", help="list the sessions started in --cwd and exit")
     ap.add_argument("--root", help="path prefix to strip from file paths (default: the session's cwd)")
     ap.add_argument("--source-root", help="where the files are now, for their total line counts (default: --root)")
@@ -605,7 +688,8 @@ def main():
     if not (args.transcript or args.cwd):
         ap.error("one of --transcript, --cwd is required")
     if args.list:
-        list_sessions(args.cwd or os.getcwd())
+        for x in sessions_of(args.cwd or os.getcwd(), args.agent):
+            print(f"{x['id']}  {x['agent']:6}  {x['started']:16}  {x['calls']:4} calls  {x['prompt']}")
         return
     transcript = find_transcript(args)
     trace = trace_for(transcript, root=args.root, source_root=args.source_root, title=args.title)
