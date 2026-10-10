@@ -1,0 +1,19 @@
+README.md
+  s_783ad5fae2baa2::t_96152108cb75ac 96-97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9531d641492372500a8b7238bd558f5a6069866d",
+  "prompts": {},
+  "sessions": {
+    "s_783ad5fae2baa2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "85d50b89-c10a-440a-b45e-cb87a1c7dacc",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Zeljko Obrenovic <zeljkoobrenovic@yahoo.com>"
+    }
+  }
+}
