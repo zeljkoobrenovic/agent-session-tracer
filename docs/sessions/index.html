@@ -75,6 +75,11 @@ table.sessions, table.folders { border-collapse: separate; border-spacing: 0; fo
 .sessions td.id a { font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; text-decoration: none; }
 .sessions td.id a:hover { text-decoration: underline; }
 .sessions td.when { color: var(--muted); }
+.sessions th:first-child, .sessions td.agent { padding-right: 2px; width: 26px; }
+.alogo { width: 18px; height: 18px; display: block; margin: 1px 0; }
+.alogo.codex { width: 20px; height: 20px; margin: 0; }
+:root[data-theme="dark"] .alogo.codex { filter: invert(1); }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .alogo.codex { filter: invert(1); } }
 .sessions td.model { color: var(--muted); }
 .sessions td.cost { white-space: nowrap; }
 .sessions td.cost.est { color: var(--muted); }
@@ -186,11 +191,11 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
   function tokens(r) { return (r.cache_read || 0) + newTok(r) + (r.output || 0); }
 
   var COLS = [
+    {k: 'agent', l: '', cls: 'agent', v: function (r) { return r.agent || 'claude'; }, h: function (r) { return r.agent === 'codex' ? '<img class="alogo codex" src="codex.png" alt="Codex">' : '<img class="alogo" src="claude.png" alt="Claude Code">'; }, tip: function (r) { return r.agent === 'codex' ? 'Codex' : 'Claude Code'; }},
     {k: 'started', l: 'started', cls: 'when', v: function (r) { return r.started || ''; }, h: function (r) { return fmtWhen(r.started); }, tip: function (r) { return r.ended ? 'first call ' + fmtWhen(r.started) + ', last ' + fmtWhen(r.ended) : ''; }},
     {k: 'folder', l: 'folder', cls: 'folder', v: function (r) { return r.folder || ''; }, h: function (r) { return esc(r.folder); }, tip: function (r) { return r.cwd; }},
     {k: 'id', l: 'session', cls: 'id', v: function (r) { return r.id; }, h: function (r) { return '<a href="' + esc(r.page || '#') + '">' + esc(r.id.length === 36 ? r.id.slice(0, 8) : r.id) + '</a>'; }, tip: function (r) { return r.id + (r.title && r.title !== r.id && r.title !== r.first_prompt ? '\n' + r.title : ''); }},
     {k: 'first_prompt', l: 'first prompt', cls: 'prompt', v: function (r) { return r.first_prompt || ''; }, h: function (r) { return r.first_prompt ? esc(r.first_prompt) : '<span class="hint">(none)</span>'; }, tip: function (r) { return r.first_prompt; }},
-    {k: 'agent', l: 'agent', cls: 'model', v: function (r) { return r.agent || 'claude'; }, h: function (r) { return r.agent === 'codex' ? 'Codex' : 'Claude'; }},
     {k: 'model', l: 'model', cls: 'model', v: function (r) { return r.model || ''; }, h: function (r) { return esc(shortModel(r.model)); }, tip: function (r) { return r.model; }},
     {k: 'prompts', l: 'prompts', num: true, v: function (r) { return r.prompts || 0; }},
     {k: 'turns', l: 'turns', num: true, v: function (r) { return r.turns || 0; }},
@@ -260,15 +265,15 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
       tile('files edited', abbrT(sum(list, function (r) { return r.files_edited; })), abbrT(sum(list, function (r) { return r.edits; })) + ' edits · ' + abbrT(sum(list, function (r) { return r.lines_read; })) + ' lines read');
     count.textContent = list.length === rows.length ? '' : list.length + ' of ' + rows.length + ' sessions';
     var ctx = {maxCost: Math.max.apply(null, costs.concat([0]))};
-    var showFolder = counts('folder').length > 1, showAgent = counts('agent').length > 1;
+    var showFolder = counts('folder').length > 1;
     var h = '<thead><tr>' + COLS.map(function (c) {
-      if ((c.k === 'folder' && !showFolder) || (c.k === 'agent' && !showAgent)) return '';
-      return '<th class="' + (c.num ? 'num' : '') + (c.k === sortKey ? ' on' : '') + '" data-sort="' + c.k + '">' + esc(c.l) + (c.k === sortKey ? '<span class="arr">' + (sortDir > 0 ? '▲' : '▼') + '</span>' : '') + '</th>';
+      if (c.k === 'folder' && !showFolder) return '';
+      return '<th class="' + (c.num ? 'num' : '') + (c.k === sortKey ? ' on' : '') + '" data-sort="' + c.k + '"' + (c.k === 'agent' ? ' title="agent: Claude Code or Codex"' : '') + '>' + esc(c.l) + (c.k === sortKey ? '<span class="arr">' + (sortDir > 0 ? '▲' : '▼') + '</span>' : '') + '</th>';
     }).join('') + '</tr></thead><tbody>';
     if (!list.length) h += '<tr><td colspan="' + COLS.length + '" class="empty">' + (rows.length ? 'No session matches the filters.' : 'No sessions.') + '</td></tr>';
     list.forEach(function (r) {
       h += '<tr data-page="' + esc(r.page || '') + '">' + COLS.map(function (c) {
-        if ((c.k === 'folder' && !showFolder) || (c.k === 'agent' && !showAgent)) return '';
+        if (c.k === 'folder' && !showFolder) return '';
         var tip = c.tip ? c.tip(r) : '';
         return '<td class="' + (c.num ? 'num ' : '') + (c.cls || '') + (c.cls2 ? ' ' + c.cls2(r) : '') + '"' + (tip ? ' title="' + esc(tip) + '"' : '') + '>' + (c.h ? c.h(r, ctx) : fmt(c.v(r))) + '</td>';
       }).join('') + '</tr>';
@@ -276,7 +281,7 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
     h += '</tbody>';
     if (list.length > 1) {
       h += '<tfoot><tr>' + COLS.map(function (c) {
-        if ((c.k === 'folder' && !showFolder) || (c.k === 'agent' && !showAgent)) return '';
+        if (c.k === 'folder' && !showFolder) return '';
         var v;
         if (c.k === 'started') v = list.length + ' sessions';
         else if (c.k === 'files') v = fmt(sum(list, function (r) { return r.files_read; })) + ' / ' + fmt(sum(list, function (r) { return r.files_edited; }));
