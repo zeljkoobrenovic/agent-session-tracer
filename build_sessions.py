@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a sessions landscape: one page listing every Claude Code or Codex session of one or more folders (or of all of them)
+"""Build a sessions landscape: one page listing every agent session (Claude Code or Codex) of one or more folders (or of all of them)
 with its totals, and one trace page per session, which the table's rows open.
 
 Usage:

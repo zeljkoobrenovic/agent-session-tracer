@@ -2,9 +2,10 @@
 """Turn-by-turn trace of an agent session: which files it read, searched and edited in each API call, and how many
 tokens each call re-sent from the cache, wrote to it and produced.
 
-The input is Claude Code's own session transcript, which it writes for every session (interactive or `claude -p`)
-under ~/.claude/projects/<cwd slug>/<session id>.jsonl. Nothing else needs to be logged: every assistant message
-carries the call's token usage (input, cache read, cache write, output) and every tool call is followed by its result.
+The input is the agent's own session transcript: Claude Code writes one for every session (interactive or `claude -p`)
+under ~/.claude/projects/<cwd slug>/<session id>.jsonl, Codex a rollout file under ~/.codex/sessions (read by
+codex_trace.py). Nothing else needs to be logged: every assistant message carries the call's token usage (input,
+cache read, cache write, output) and every tool call is followed by its result.
 
 Usage:
   turn_trace.py --cwd <folder> --list             # the sessions started in that folder (id, time, calls, prompt)
@@ -124,7 +125,7 @@ def claude_transcripts_for(cwd):
 
 
 def transcripts_for(cwd, agent=None):
-    """The transcripts of the sessions started in cwd, Claude Code's and Codex's, oldest first by modification time;
+    """The transcripts of the sessions started in cwd, of either agent (Claude Code or Codex), oldest first by modification time;
     agent = "claude" or "codex" keeps one kind."""
     files = []
     if agent in (None, "claude"):
@@ -355,7 +356,7 @@ def analyze_bash(command, out, root, cwd=""):
     """Classify a shell command and attribute its output to files.
 
     Returns (kind, files, lines, cwd): kind is the command's dominant kind, files a list of {path, kind, lines},
-    cwd the working directory after the command (Claude Code keeps it between Bash calls).
+    cwd the working directory after the command (the agent's shell keeps it between calls).
     Pipelines are split on ; && || | and each segment classified by its first word; a leading `cd` moves the
     cwd for the relative paths that follow. Read segments (cat/sed/head/tail) get the output lines, split by
     what each asked for when the command says so; search segments (grep/rg/find) are attributed through the
@@ -687,7 +688,7 @@ def fill_template(name, **subs):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--transcript", help="a Claude Code session transcript (.jsonl)")
+    ap.add_argument("--transcript", help="an agent session transcript (.jsonl): a Claude Code transcript or a Codex rollout file")
     ap.add_argument("--cwd", help="folder the session was started in (latest transcript, or the one given with --session)")
     ap.add_argument("--session", help="session id (or a prefix of it) among the sessions of --cwd; see --list")
     ap.add_argument("--agent", choices=["claude", "codex"], help="only that agent's sessions of --cwd (default: both)")

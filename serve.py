@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Live trace page: a local server that follows the latest Claude Code or Codex session of a folder and serves the trace page,
+"""Live trace page: a local server that follows the latest agent session (Claude Code or Codex) of a folder and serves the trace page,
 which refreshes it every few seconds while the session goes on.
 
 Usage:
