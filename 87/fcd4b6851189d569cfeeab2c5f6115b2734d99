@@ -1,0 +1,31 @@
+docs/index.html
+  s_0af420b20b4753::t_e5637a427b15b0 177-190,244,282-286,724,730-807
+docs/sessions/haiku-t01-long-files.html
+  s_0af420b20b4753::t_6efef19e10b29d 177-190,244,282-286,724,730-807
+docs/sessions/haiku-t01-split-files.html
+  s_0af420b20b4753::t_ae7480e19ea2df 177-190,244,282-286,724,730-807
+docs/sessions/sonnet-t01-long-files.html
+  s_0af420b20b4753::t_df79562d006dc8 177-190,244,282-286,724,730-807
+docs/sessions/sonnet-t01-split-files.html
+  s_0af420b20b4753::t_dd6ba013e8faca 177-190,244,282-286,724,730-807
+template.html
+  s_0af420b20b4753::t_ea5ef79ec729fe 177-190,244,282-286,724,730-807
+turn_trace.py
+  s_0af420b20b4753::t_7369857cbe64e9 49-50,481-482,487,490-491,513,531,533-534,540-541,557,572-576
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "87fcd4b6851189d569cfeeab2c5f6115b2734d99",
+  "prompts": {},
+  "sessions": {
+    "s_0af420b20b4753": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f8fc5201-db12-4f99-a873-2c992f5fc97e",
+        "model": "unknown"
+      },
+      "human_author": "Zeljko Obrenovic <zeljkoobrenovic@yahoo.com>"
+    }
+  }
+}
