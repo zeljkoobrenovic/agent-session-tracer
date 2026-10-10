@@ -86,7 +86,8 @@ details.help code, .drop code, .say code { font: 12px/1.45 ui-monospace, SFMono-
 .legend .chip, .legend .tool { margin: 0 4px 0 0; vertical-align: 0; }
 .legend .tool { margin-right: 1px; }
 .legend .group { color: var(--faint); margin-right: -8px; }
-.grid-wrap { display: inline-block; max-width: 100%; max-height: calc(100vh - 48px); margin-bottom: 8px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); vertical-align: top; }
+.main-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+.grid-wrap { flex: 999 1 0; min-width: 0; max-width: max-content; max-height: calc(100vh - 48px); margin: 0; overflow: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); vertical-align: top; }
 table.grid { border-collapse: separate; border-spacing: 0; font-size: 12px; width: auto; }
 .grid th, .grid td { padding: 0; border-bottom: 1px solid var(--border); white-space: nowrap; }
 .grid th.head { position: sticky; left: 0; z-index: 2; background: var(--surface); text-align: left; padding: 4px 14px; font-weight: 500; min-width: 260px; max-width: 420px; overflow: hidden; text-overflow: ellipsis; border-right: 1px solid var(--border); }
@@ -95,8 +96,8 @@ table.grid { border-collapse: separate; border-spacing: 0; font-size: 12px; widt
 .grid thead th[data-turn] { cursor: pointer; }
 .grid thead th[data-turn]:hover { color: var(--text); background: var(--border); }
 .grid td.cell { width: var(--col); min-width: var(--col); text-align: center; vertical-align: bottom; height: 30px; cursor: pointer; }
-.grid td.total { padding: 0 14px; text-align: right; color: var(--muted); border-left: 1px solid var(--border); min-width: 90px; font-variant-numeric: tabular-nums; }
-.grid thead th.total { text-align: right; padding: 0 14px; border-left: 1px solid var(--border); }
+.grid td.total { position: sticky; right: 0; z-index: 1; background: var(--surface); padding: 0 14px; text-align: right; color: var(--muted); border-left: 1px solid var(--border); min-width: 90px; font-variant-numeric: tabular-nums; }
+.grid thead th.total { position: sticky; right: 0; z-index: 3; text-align: right; padding: 0 14px; border-left: 1px solid var(--border); }
 .grid tr.token td.cell { height: 82px; position: relative; }
 .grid tr.token td.cell:hover::after { content: attr(data-v); position: absolute; left: 50%; top: 2px; transform: translateX(-50%); font-size: 10px; line-height: 14px; padding: 0 4px; border-radius: 3px; background: var(--text); color: var(--bg); white-space: nowrap; pointer-events: none; z-index: 1; }
 .grid tr.sub { display: none; }
@@ -139,7 +140,7 @@ table.grid { border-collapse: separate; border-spacing: 0; font-size: 12px; widt
 .grid td.cell.sel, .grid thead th.sel, .grid tbody tr:hover td.cell.sel { background: var(--sel); }
 .grid thead th.sel { color: var(--sel-strong); box-shadow: inset 0 -2px 0 var(--sel-strong); }
 .grid thead th[data-turn]:focus-visible { outline-offset: -2px; }
-.detail { margin: 24px 0; font-size: 14px; clear: both; border: 1px solid var(--border); border-left: 3px solid var(--sel-strong); border-radius: 8px; background: var(--surface); padding: 16px 22px; max-width: 1100px; }
+.detail { flex: 1 1 420px; min-width: 0; margin: 0; font-size: 14px; border: 1px solid var(--border); border-left: 3px solid var(--sel-strong); border-radius: 8px; background: var(--surface); padding: 16px 22px; max-width: 1100px; max-height: calc(100vh - 48px); overflow: auto; }
 .detail-head { display: flex; align-items: center; gap: 12px; }
 .detail-head h2 { font-size: 16px; margin: 0; flex: 1; }
 .detail-head .nav { display: flex; gap: 4px; }
@@ -149,8 +150,13 @@ table.grid { border-collapse: separate; border-spacing: 0; font-size: 12px; widt
 .detail .say { margin: 10px 0 14px; white-space: pre-wrap; }
 .detail .prompt { margin: 8px 0 12px; padding: 6px 12px; border-left: 3px solid var(--muted); background: var(--surface-2); border-radius: 0 6px 6px 0; white-space: pre-wrap; }
 .detail .prompt .k { display: block; font-size: 12px; }
-.prompts { margin: 24px 0; max-width: 1100px; }
-.prompts h2 { font-size: 16px; margin: 0 0 8px; }
+.panel { margin: 0 0 24px; max-width: 1100px; }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+.tabs button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; padding: 6px 12px; margin-bottom: -1px; color: var(--muted); font-weight: 500; }
+.tabs button:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+.tabs button[aria-selected=true] { color: var(--text); border-bottom-color: var(--sel-strong); }
+.tabs .hint { font-weight: 400; }
+.prompts { margin: 0; }
 .prompts .sub { color: var(--muted); font-size: 13px; margin: 0 0 10px; }
 .pwrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
 .ptable { border-collapse: collapse; font-size: 13px; width: 100%; }
@@ -174,11 +180,9 @@ table.grid { border-collapse: separate; border-spacing: 0; font-size: 12px; widt
 .detail .k { display: inline-block; min-width: 54px; color: var(--muted); }
 .detail .k.err { color: var(--error); }
 .detail .files { color: var(--faint); font-size: 12px; margin-left: 58px; display: block; }
-details.map { margin: 8px 0 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 10px 16px 12px; max-width: 1100px; }
-details.map summary { cursor: pointer; font-weight: 500; }
-details.map summary:hover { text-decoration: underline; }
-details.map p.hint { margin: 6px 0 8px; }
-details.map .sw::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin: 0 4px 0 2px; vertical-align: -1px; background: var(--c); }
+.map { margin: 0; }
+.map p.hint { margin: 0 0 8px; }
+.map .sw::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin: 0 4px 0 2px; vertical-align: -1px; background: var(--c); }
 .map-wrap { overflow: auto; }
 #map { display: block; max-width: 100%; height: auto; cursor: zoom-out; }
 #map circle.dir { fill: var(--faint); fill-opacity: .07; stroke: var(--border); stroke-width: 1; cursor: zoom-in; }
@@ -207,7 +211,7 @@ a { color: var(--read); }
   .controls { padding: 10px 12px; }
   .tile { padding: 10px 14px; }
   details.help { padding: 10px 14px; }
-  .detail { padding: 12px 14px; }
+  .detail { padding: 12px 14px; flex-basis: 100%; }
   h1 { font-size: 20px; }
   .logo { width: 36px; height: 36px; }
   .logos { gap: 6px; }
@@ -250,13 +254,13 @@ ${nav}
   <p><b>Re-sent from cache, new on top.</b> The blue bar grows every turn because the whole conversation so far is re-sent with each call. The thin slice on top is what the turn added, which the next turn re-sends in blue. Its light-blue base is the static prefix shared by all sessions, the fixed system prompt and the tool definitions, which the CLI keeps cached, so even the first call reads it rather than writing it. The cost of a session is mostly the area under the blue bars, so the number of turns and what each one appends matter more than any single read.</p>
   <p><b>New, written to cache.</b> That slice alone: the results of the tools the agent called last turn (orange, estimated at 2.3 characters per token, the rate measured on these transcripts), the agent's own previous words and tool calls (green), on the first turn the session setup (yellow: the session-specific system prompt sections, the skill and agent listings, CLAUDE.md, the task prompt) and later the per-turn reminders and instructions the CLI injects (grey).</p>
   <p><b>Files.</b> The bar above the grid sorts the file rows (first seen, lines read, edits, search hits, file size, name) and filters them by a part of their path; both are remembered in this browser. Lines attributed to a file are those in tool output: a <code>Read</code> or <code>cat/sed/head</code> of the file counts as read lines, an <code>Edit</code> as edited lines, a <code>grep</code> output line naming the file as a search hit. Files seen only in search results are hidden by default.</p>
-  <p><b>Files map.</b> Under the grid, every file of the session as a circle whose area is the file's length as the session saw it (a <code>Read</code> reports the total; otherwise the file is counted on disk when the trace is made), nested in the circles of its folders (a chain of folders with nothing else in them is shown as one). Inside a file, the share of its lines the agent read in blue and the share it edited in orange, both as areas, so the eye compares like with like: a small orange dot in a large circle is a small change to a long file. Files whose length is unknown are dashed and sized by the lines touched. Click a folder to zoom into it, its background or a breadcrumb to zoom out, a file to jump to its row. The file rows' filter applies.</p>
-  <p><b>Interacting.</b> Hover any cell or row label for details. Click a turn number or any cell in its column to list the turn's commands; <kbd>←</kbd> <kbd>→</kbd> step between turns, <kbd>Esc</kbd> closes. The ▸ next to a row label opens its breakdown.</p>
+  <p><b>Files map.</b> A tab under the grid: every file of the session as a circle whose area is the file's length as the session saw it (a <code>Read</code> reports the total; otherwise the file is counted on disk when the trace is made), nested in the circles of its folders (a chain of folders with nothing else in them is shown as one). Inside a file, the share of its lines the agent read in blue and the share it edited in orange, both as areas, so the eye compares like with like: a small orange dot in a large circle is a small change to a long file. Files whose length is unknown are dashed and sized by the lines touched. Click a folder to zoom into it, its background or a breadcrumb to zoom out, a file to jump to its row. The file rows' filter applies.</p>
+  <p><b>Interacting.</b> Hover any cell or row label for details. Click a turn number or any cell in its column to list the turn's commands in the panel beside the grid (below it when the grid needs the width); <kbd>←</kbd> <kbd>→</kbd> step between turns, <kbd>Esc</kbd> closes. The ▸ next to a row label opens its breakdown.</p>
   <p><b>Codex sessions</b> look the same, read from <code>~/.codex/sessions</code>. The OpenAI API reports cached and uncached input rather than cache writes, so the orange row is "New, not from cache": the input tokens the call sent that were not served from the cache, the context it added, billed at the input rate. The output row includes the reasoning tokens. Edits come from the patches Codex applied, commands and their output from its command log.</p>
   <p><b>Live mode</b> (<code>serve.py</code>). The trace refreshes every few seconds. The session dropdown switches to any other session started in the same folder; "latest" keeps following, and picks up a new session when one starts. With "follow newest turn" on, each new turn is selected and scrolled into view, so the detail panel shows what the agent is doing now; picking another turn pauses that until you tick it again. While the tab is in the background its title counts the turns that arrived.</p>
   <p><b>Cost.</b> When the trace records what the run cost, that is shown; otherwise, and for live sessions, an estimate from the model's list prices: cache reads, cache writes (at the 1-hour rate Claude Code uses), uncached input and output, each at its own rate, per turn. Haiku 5.5's higher rate for prompts over 100K tokens is applied per turn. Prices are the ones published on 2026-10-09; the turn detail shows each turn's share.</p>
   <p><b>Seconds per turn.</b> Its own scale. Green is the model's time, from the prompt or the previous tool result until the response finished streaming; orange is the time its tools then took. The waits between your prompts are not counted, so the "active time" tile is how long the agent worked, not how long the session was open.</p>
-  <p><b>Prompts.</b> One message you type usually takes the agent several API calls. The numbered marks in the Prompts row, and the border on the left of those columns, show where each of your messages starts; the turns up to the next mark are its answer. The turn detail quotes the message, and the table under the grid lists every prompt with the tokens its turns caused, input and output together, as a share of the session, with their time and cost.</p>
+  <p><b>Prompts.</b> One message you type usually takes the agent several API calls. The numbered marks in the Prompts row, and the border on the left of those columns, show where each of your messages starts; the turns up to the next mark are its answer. The turn detail quotes the message, and the Prompts tab under the grid lists every prompt with the tokens its turns caused, input and output together, as a share of the session, with their time and cost.</p>
 </details>
 
 <div class="legend" id="legend">
@@ -287,15 +291,22 @@ ${nav}
   <label title="Files that only appeared in grep or search output, never read or edited, are left out"><input type="checkbox" id="hideHits" checked> hide search-only files</label>
   <span class="hint" id="fcount"></span>
 </div>
+<div class="main-row">
 <div class="grid-wrap"><table class="grid" id="grid" aria-label="Tokens, tool calls and files per turn"></table></div>
-<details class="map" id="mapBox" open>
-  <summary>Files map <span class="hint" id="mapHint"></span></summary>
+<section class="detail" id="detail" hidden aria-live="polite"></section>
+</div>
+<div class="panel">
+<div class="tabs" id="tabs" role="tablist">
+  <button type="button" role="tab" data-tab="prompts" aria-selected="true">Prompts <span class="hint" id="promptsHint"></span></button>
+  <button type="button" role="tab" data-tab="map" aria-selected="false">Files map <span class="hint" id="mapHint"></span></button>
+</div>
+<section class="prompts" id="prompts" role="tabpanel"></section>
+<div class="map" id="mapBox" role="tabpanel" hidden>
   <p class="hint">Files as circles, nested in their folders. A file's area is its length as the session saw it (dashed: length unknown, sized by the lines touched); inside, <span class="sw" style="--c: var(--read)"></span>the share of its lines read and <span class="sw" style="--c: var(--write)"></span>the share edited, both as areas, so a thin orange dot in a big circle is a small change in a long file. Click a folder to zoom in, the background to zoom out, a file to jump to its row; hover for the numbers. The file rows' filter applies.</p>
   <div class="crumb" id="mapCrumb"></div>
   <div class="map-wrap"><svg id="map" role="img" aria-label="Files of the session as circles, nested in their folders"></svg></div>
-</details>
-<section class="detail" id="detail" hidden aria-live="polite"></section>
-<section class="prompts" id="prompts" hidden></section>
+</div>
+</div>
 
 <details class="help">
   <summary>Make a trace of your own session</summary>
@@ -320,7 +331,7 @@ ${nav}
   var current = null, selected = null, trace = null;
   var onUserSelect = null;  // live mode: told when the user picks a turn, to pause following
   var spans = [];  // the current trace's prompts and the turns each one caused
-  var prompts = $('prompts');
+  var prompts = $('prompts'), promptsHint = $('promptsHint');
   function userSelect(i, scroll) { showTurn(i, scroll); if (onUserSelect) onUserSelect(i); }
   var open = {resent: false, new: false, tools: false};
   try { var stored = JSON.parse(localStorage.getItem('trace-open') || '{}'); open.resent = !!stored.resent; open.new = !!stored.new; open.tools = !!stored.tools; } catch (e) {}
@@ -591,7 +602,7 @@ ${nav}
     turns.forEach(function (t, i) { if (t.prompt) each('[data-turn="' + i + '"]', function (e) { e.classList.add('ps'); }); });
     if (spans.length) {
       var hasSecs = spans.some(function (sp) { return sp.secs != null; }), hasCost = pk != null;
-      var ph = '<h2>Prompts</h2><p class="sub">Each prompt with the turns (API calls) it took, from the prompt up to the next one, and their tokens, input and output together, as a share of the session. Click a row to open its first turn.</p>' +
+      var ph = '<p class="sub">Each prompt with the turns (API calls) it took, from the prompt up to the next one, and their tokens, input and output together, as a share of the session. Click a row to open its first turn.</p>' +
         '<div class="pwrap"><table class="ptable"><thead><tr><th>#</th><th>prompt</th><th class="num">turns</th><th class="num">tokens</th><th>share</th><th class="num">output</th>' + (hasSecs ? '<th class="num">time</th>' : '') + (hasCost ? '<th class="num">cost</th>' : '') + '</tr></thead><tbody>';
       spans.forEach(function (sp) {
         ph += '<tr data-start="' + sp.start + '" data-end="' + sp.end + '" title="' + esc('turn' + (sp.turns > 1 ? 's ' + (sp.start + 1) + '\u2013' + (sp.end + 1) : ' ' + (sp.start + 1)) + '\n' + sp.text) + '"><td><span class="mark">' + sp.k + '</span></td><td class="text">' + esc(sp.text) + '</td><td class="num">' + sp.turns + '</td>' +
@@ -601,8 +612,8 @@ ${nav}
       var covered = spans.reduce(function (a, sp) { return a + sp.tokens; }, 0), before = sessionTok - covered;
       ph += '</tbody><tfoot><tr><td></td><td>' + spans.length + ' prompt' + (spans.length === 1 ? '' : 's') + (before > 0 ? ' \u00B7 ' + fmt(before) + ' tokens before the first prompt' : '') + '</td><td class="num">' + n + '</td><td class="num">' + fmt(sessionTok) + '</td><td class="share">100%</td><td class="num">' + fmt(sum('output')) + '</td>' +
         (hasSecs ? '<td class="num">' + fmtS(spans.reduce(function (a, sp) { return a + (sp.secs || 0); }, 0)) + '</td>' : '') + (hasCost ? '<td class="num">' + fmtUsd(est) + '</td>' : '') + '</tr></tfoot></table></div>';
-      prompts.innerHTML = ph; prompts.hidden = false;
-    } else { prompts.innerHTML = ''; prompts.hidden = true; }
+      prompts.innerHTML = ph; promptsHint.textContent = ' \u00B7 ' + spans.length;
+    } else { prompts.innerHTML = '<p class="hint">No prompts recorded in this trace.</p>'; promptsHint.textContent = ''; }
     applyFiles();
     ['resent', 'new', 'tools'].forEach(function (w) { if (open[w]) each('tr.sub-' + w, function (r) { r.classList.add('shown'); }); });
     hovCol = null;
@@ -741,8 +752,17 @@ ${nav}
   // share edited in orange inside each file; click a folder to zoom in, its background or the breadcrumb to zoom out
   var mapSvg = $('map'), mapHint = $('mapHint'), mapBox = $('mapBox'), mapCrumb = $('mapCrumb');
   var mapRoot = null, mapFocus = null, mapView = null, mapAnim = null, MAP_PX = 640;
-  try { mapBox.open = localStorage.getItem('trace-map') !== 'closed'; } catch (e) {}
-  mapBox.addEventListener('toggle', function () { try { localStorage.setItem('trace-map', mapBox.open ? 'open' : 'closed'); } catch (e) {} });
+  var tabs = $('tabs'), tab = 'prompts';
+  try { tab = localStorage.getItem('trace-tab') === 'map' ? 'map' : 'prompts'; } catch (e) {}
+  function showTab(t) {  // one of the two secondary views at a time: the prompts table (default) or the files map
+    tab = t;
+    Array.prototype.forEach.call(tabs.querySelectorAll('button[data-tab]'), function (b) { b.setAttribute('aria-selected', b.getAttribute('data-tab') === t ? 'true' : 'false'); });
+    prompts.hidden = t !== 'prompts'; mapBox.hidden = t !== 'map';
+    try { localStorage.setItem('trace-tab', t); } catch (e) {}
+    if (t === 'map' && current) renderMap();  // sized by its visible width
+  }
+  tabs.addEventListener('click', function (e) { var b = e.target.closest('button[data-tab]'); if (b) showTab(b.getAttribute('data-tab')); });
+  showTab(tab);
   function packCircles(items) {  // positions around (0, 0): a phyllotaxis start, then collisions pushed apart
     var n = items.length, golden = Math.PI * (3 - Math.sqrt(5));
     if (n === 1) { items[0].x = items[0].y = 0; return; }
