@@ -26,7 +26,11 @@
 body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
 main { max-width: 1400px; margin: 0 auto; padding: 32px 24px 64px; }
 .top { display: flex; align-items: flex-start; gap: 16px; }
-.logo { width: 78px; height: 78px; flex: none; margin-top: 2px; }
+.logos { display: flex; gap: 10px; flex: none; margin-top: 2px; }
+.logo { width: 78px; height: 78px; flex: none; display: block; }
+.logo.codex { padding: 6px; }
+:root[data-theme="dark"] .logo.codex { filter: invert(1); }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .logo.codex { filter: invert(1); } }
 .top > div { flex: 1; min-width: 0; }
 h1 { font-size: 24px; margin: 0 0 4px; }
 h2 { font-size: 16px; margin: 28px 0 8px; }
@@ -93,6 +97,7 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
   main { padding: 20px 16px 40px; }
   h1 { font-size: 20px; }
   .logo { width: 36px; height: 36px; }
+  .logos { gap: 6px; }
   .top { gap: 12px; }
   .tile { padding: 10px 14px; min-width: 0; flex: 1 1 100px; }
   .filters { padding: 10px 12px; }
@@ -105,7 +110,7 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
 <body>
 <main>
 <div class="top">
-  <img class="logo" src="claude.png" alt="" width="78" height="78">
+  <span class="logos"><img class="logo" src="claude.png" alt="Claude Code" width="78" height="78"><img class="logo codex" src="codex.png" alt="Codex" width="78" height="78"></span>
   <div>
     <h1>Agent Sessions <span class="hint" id="scope"></span></h1>
     <p class="lead" id="lead">Every Claude Code and Codex session in one table: what each one took in turns, prompts, tokens, cost and time, and where the agent read and wrote. A row opens the session's turn-by-turn trace.</p>
@@ -157,7 +162,20 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]; }); }
   function fmt(n) { return n == null ? '–' : Math.round(n).toLocaleString('en-US'); }
-  function fmtK(n) { return n == null ? '–' : n >= 1e9 ? (n / 1e9).toFixed(1) + 'B' : n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e4 ? Math.round(n / 1e3) + 'k' : fmt(n); }
+  // 924,667 -> 925K, 306,213,083 -> 306M: three significant digits; abbrT wraps it with the full number as hover title
+  function abbr(n) {
+    if (n == null) return '\u2013';
+    var a = Math.abs(n);
+    if (a < 1000) return fmt(n);
+    var units = [[1e3, 'K'], [1e6, 'M'], [1e9, 'B'], [1e12, 'T']], i = 0;
+    while (i < units.length - 1 && a >= units[i + 1][0]) i++;
+    var v = n / units[i][0];
+    if (Math.abs(v) >= 999.5 && i < units.length - 1) { i++; v = n / units[i][0]; }
+    var s = Math.abs(v) >= 100 ? Math.round(v).toString() : Math.abs(v) >= 10 ? v.toFixed(1) : v.toFixed(2);
+    return s.replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1') + units[i][1];
+  }
+  function abbrT(n) { return n == null ? '\u2013' : '<span title="' + fmt(n) + '">' + abbr(n) + '</span>'; }
+  var fmtK = abbr;
   function fmtUsd(x) { return x == null ? '–' : '$' + (x < 0.01 ? x.toFixed(4) : x < 1 ? x.toFixed(3) : x < 100 ? x.toFixed(2) : Math.round(x).toLocaleString('en-US')); }
   function fmtS(s) { if (s == null) return '–'; if (s >= 86400) return Math.floor(s / 86400) + 'd ' + Math.round(s % 86400 / 3600) + 'h'; if (s >= 3600) return Math.floor(s / 3600) + 'h ' + Math.round(s % 3600 / 60) + 'm'; if (s >= 60) return Math.floor(s / 60) + 'm ' + ('0' + Math.round(s % 60)).slice(-2) + 's'; return Math.round(s) + ' s'; }
   function pad(n) { return (n < 10 ? '0' : '') + n; }
@@ -232,14 +250,14 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
     var active = sum(list, function (r) { return r.duration_s; }), span = sum(list, function (r) { return r.span_s; }), uncached = sum(list, function (r) { return r.input; });
     var starts = list.map(function (r) { return r.started || ''; }).filter(Boolean).sort(), first = starts[0], last = starts[starts.length - 1];
     tiles.innerHTML =
-      tile('sessions', fmt(list.length), (nf > 1 ? nf + ' folders · ' : '') + fmt(sum(list, function (r) { return r.prompts; })) + ' prompts' + (first && last ? ' · ' + first.slice(0, 10) + (last.slice(0, 10) !== first.slice(0, 10) ? ' to ' + last.slice(0, 10) : '') : '')) +
-      tile('turns', fmt(sum(list, function (r) { return r.turns; })), fmt(sum(list, function (r) { return r.tool_calls; })) + ' tool calls') +
-      tile('tokens re-sent', fmtK(sum(list, function (r) { return r.cache_read; })), 'read from the cache') +
-      tile('tokens new', fmtK(sum(list, newTok)), 'written to the cache' + (uncached ? ' · ' + fmtK(uncached) + ' uncached' : '')) +
-      tile('tokens out', fmtK(sum(list, function (r) { return r.output; }))) +
+      tile('sessions', abbrT(list.length), (nf > 1 ? nf + ' folders · ' : '') + abbrT(sum(list, function (r) { return r.prompts; })) + ' prompts' + (first && last ? ' · ' + first.slice(0, 10) + (last.slice(0, 10) !== first.slice(0, 10) ? ' to ' + last.slice(0, 10) : '') : '')) +
+      tile('turns', abbrT(sum(list, function (r) { return r.turns; })), abbrT(sum(list, function (r) { return r.tool_calls; })) + ' tool calls') +
+      tile('tokens re-sent', abbrT(sum(list, function (r) { return r.cache_read; })), 'read from the cache') +
+      tile('tokens new', abbrT(sum(list, newTok)), 'written to the cache' + (uncached ? ' · ' + abbrT(uncached) + ' uncached' : '')) +
+      tile('tokens out', abbrT(sum(list, function (r) { return r.output; }))) +
       (known ? tile('cost', fmtUsd(total), recorded === known ? 'as recorded' : recorded ? recorded + ' recorded, ' + (known - recorded) + ' estimated' : 'estimated at list prices' + (known < list.length ? ' · ' + (list.length - known) + ' unknown' : '')) : '') +
       (active ? tile('active time', fmtS(active), 'model and tools, waits left out') : '') +
-      tile('files edited', fmt(sum(list, function (r) { return r.files_edited; })), fmt(sum(list, function (r) { return r.edits; })) + ' edits · ' + fmt(sum(list, function (r) { return r.lines_read; })) + ' lines read');
+      tile('files edited', abbrT(sum(list, function (r) { return r.files_edited; })), abbrT(sum(list, function (r) { return r.edits; })) + ' edits · ' + abbrT(sum(list, function (r) { return r.lines_read; })) + ' lines read');
     count.textContent = list.length === rows.length ? '' : list.length + ' of ' + rows.length + ' sessions';
     var ctx = {maxCost: Math.max.apply(null, costs.concat([0]))};
     var showFolder = counts('folder').length > 1, showAgent = counts('agent').length > 1;
@@ -288,7 +306,7 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
     var fs = Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return b.cost - a.cost || b.turns - a.turns; });
     var h = '<h2>By folder</h2><div class="twrap"><table class="folders"><thead><tr><th>folder</th><th class="num">sessions</th><th class="num">prompts</th><th class="num">turns</th><th class="num">re-sent</th><th class="num">new</th><th class="num">output</th><th class="num">cost</th><th class="num">active</th><th>last session</th></tr></thead><tbody>';
     fs.forEach(function (f) {
-      h += '<tr data-folder="' + esc(f.folder) + '" title="' + esc(f.cwd + '\nclick to list only this folder') + '"><td class="name">' + esc(f.folder) + '</td><td class="num">' + f.n + '</td><td class="num">' + fmt(f.prompts) + '</td><td class="num">' + fmt(f.turns) + '</td><td class="num">' + fmtK(f.resent) + '</td><td class="num">' + fmtK(f.nw) + '</td><td class="num">' + fmtK(f.out) + '</td><td class="num">' + (f.costN ? fmtUsd(f.cost) : '–') + '</td><td class="num">' + fmtS(f.active) + '</td><td>' + fmtWhen(f.last) + '</td></tr>';
+      h += '<tr data-folder="' + esc(f.folder) + '" title="' + esc(f.cwd + '\nclick to list only this folder') + '"><td class="name">' + esc(f.folder) + '</td><td class="num">' + f.n + '</td><td class="num">' + fmt(f.prompts) + '</td><td class="num">' + fmt(f.turns) + '</td><td class="num">' + abbrT(f.resent) + '</td><td class="num">' + abbrT(f.nw) + '</td><td class="num">' + abbrT(f.out) + '</td><td class="num">' + (f.costN ? fmtUsd(f.cost) : '–') + '</td><td class="num">' + fmtS(f.active) + '</td><td>' + fmtWhen(f.last) + '</td></tr>';
     });
     sec.innerHTML = h + '</tbody></table></div>';
     sec.hidden = false;

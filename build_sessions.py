@@ -115,9 +115,10 @@ def main():
     page = turn_trace.fill_template("sessions_template.html", sessions={"title": title, "sessions": rows}, note=note)
     with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8") as f:
         f.write(page)
-    logo = os.path.join(HERE, "docs", "claude.png")
-    if os.path.isfile(logo):
-        shutil.copy(logo, os.path.join(out_dir, "claude.png"))
+    for name in ("claude.png", "codex.png"):
+        logo = os.path.join(HERE, "docs", name)
+        if os.path.isfile(logo):
+            shutil.copy(logo, os.path.join(out_dir, name))
     for e in errors:
         print("skipped " + e, file=sys.stderr)
     cost = sum((r.get("cost_usd") if r.get("cost_usd") is not None else r.get("cost_estimate_usd")) or 0 for r in rows)

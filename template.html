@@ -26,7 +26,11 @@
 body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
 main { max-width: 1400px; margin: 0 auto; padding: 32px 24px 64px; }
 .top { display: flex; align-items: flex-start; gap: 16px; }
-.logo { width: 78px; height: 78px; flex: none; margin-top: 2px; }
+.logos { display: flex; gap: 10px; flex: none; margin-top: 2px; }
+.logo { width: 78px; height: 78px; flex: none; display: block; }
+.logo.codex { padding: 6px; }
+:root[data-theme="dark"] .logo.codex { filter: invert(1); }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .logo.codex { filter: invert(1); } }
 .top > div { flex: 1; min-width: 0; }
 h1 { font-size: 24px; margin: 0 0 4px; }
 .lead { color: var(--muted); margin: 0 0 20px; max-width: 900px; }
@@ -183,6 +187,7 @@ a { color: var(--read); }
   .detail { padding: 12px 14px; }
   h1 { font-size: 20px; }
   .logo { width: 36px; height: 36px; }
+  .logos { gap: 6px; }
   .top { gap: 12px; }
   .grid th.head { min-width: 150px; max-width: 190px; font-size: 11px; padding: 2px 6px; }
   .grid tr.sub th.head { padding-left: 18px; }
@@ -196,7 +201,7 @@ a { color: var(--read); }
 <body>
 <main>
 <div class="top">
-  <img class="logo" src="claude.png" alt="" width="78" height="78">
+  <span class="logos"><img class="logo" src="claude.png" alt="Claude Code" width="78" height="78"><img class="logo codex" src="codex.png" alt="Codex" width="78" height="78"></span>
   <div>
     <h1>Claude Session Tracer</h1>
     <p class="lead">What one Claude Code or Codex session cost, turn by turn: the context each API call re-sent from the prompt cache, what it added to it, what it produced, and the files the agent read, searched and edited along the way.</p>
@@ -311,6 +316,19 @@ ${nav}
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]; }); }
   function fmt(n) { return n == null ? '–' : Math.round(n).toLocaleString('en-US'); }
+  // 924,667 -> 925K, 306,213,083 -> 306M: three significant digits; abbrT wraps it with the full number as hover title
+  function abbr(n) {
+    if (n == null) return '\u2013';
+    var a = Math.abs(n);
+    if (a < 1000) return fmt(n);
+    var units = [[1e3, 'K'], [1e6, 'M'], [1e9, 'B'], [1e12, 'T']], i = 0;
+    while (i < units.length - 1 && a >= units[i + 1][0]) i++;
+    var v = n / units[i][0];
+    if (Math.abs(v) >= 999.5 && i < units.length - 1) { i++; v = n / units[i][0]; }
+    var s = Math.abs(v) >= 100 ? Math.round(v).toString() : Math.abs(v) >= 10 ? v.toFixed(1) : v.toFixed(2);
+    return s.replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1') + units[i][1];
+  }
+  function abbrT(n) { return n == null ? '\u2013' : '<span title="' + fmt(n) + '">' + abbr(n) + '</span>'; }
   // List prices in $ per million tokens: turn_trace.PRICES, embedded by the page builders. [input, 5-minute cache write, 1-hour cache write, cache read, output].
   var PRICES = ${prices};
   var PRICE_KEYS = Object.keys(PRICES).filter(function (k) { return k.indexOf(':') < 0; }).sort(function (a, b) { return b.length - a.length; });
@@ -412,14 +430,14 @@ ${nav}
       (m.model || trace.model ? '<span class="sep">·</span><span>' + esc(m.model || trace.model) + '</span>' : '') +
       (m.task ? '<span class="sep">·</span><span>task ' + esc(m.task) + (m.kind || m.variant ? ' (' + esc(m.kind || '') + (m.kind && m.variant ? ', ' : '') + (m.variant ? 'variant ' + esc(m.variant) : '') + ')' : '') + '</span>' : '') + '</div>';
     summary.innerHTML = title + '<div class="tiles">' +
-      tile('turns', n, calls + ' tool call' + (calls === 1 ? '' : 's')) +
-      tile('input tokens', fmt(sum('cache_read') + sum('cache_write') + sum('input')), fmt(sum('cache_read')) + ' re-sent · ' + fmt(sum('cache_write')) + ' new') +
-      tile('output tokens', fmt(sum('output'))) +
+      tile('turns', abbrT(n), abbrT(calls) + ' tool call' + (calls === 1 ? '' : 's')) +
+      tile('input tokens', abbrT(sum('cache_read') + sum('cache_write') + sum('input')), abbrT(sum('cache_read')) + ' re-sent · ' + abbrT(sum('cache_write')) + ' new') +
+      tile('output tokens', abbrT(sum('output'))) +
       (m.cost_usd != null ? tile('cost', fmtUsd(m.cost_usd), 'as recorded' + (est != null ? ' \u00B7 list-price estimate ' + fmtUsd(est) : ''))
         : est != null ? tile('cost, estimated', fmtUsd(est), 'list prices \u00B7 1h cache writes') : '') +
       (m.duration_s != null ? tile(m.model_s != null ? 'active time' : 'duration', fmtS(m.duration_s), m.model_s != null ? fmtS(m.model_s) + ' model \u00B7 ' + fmtS(m.tools_s) + ' tools' : '') : '') +
-      tile('files read', filesRead, fmt(linesRead) + ' lines') +
-      tile('edits', edits, filesEdited ? filesEdited + ' file' + (filesEdited === 1 ? '' : 's') : '') +
+      tile('files read', abbrT(filesRead), abbrT(linesRead) + ' lines') +
+      tile('edits', abbrT(edits), filesEdited ? abbrT(filesEdited) + ' file' + (filesEdited === 1 ? '' : 's') : '') +
       (m.success != null ? tile('acceptance test', m.success ? 'passed' : 'failed', '', m.success ? 'ok' : 'bad') : '') + '</div>';
 
     var h = '<thead><tr><th class="head">turn</th>';

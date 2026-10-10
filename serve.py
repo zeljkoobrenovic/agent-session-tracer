@@ -158,9 +158,9 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
             else:
                 self.send(200, "application/json; charset=utf-8", body, etag)
-        elif path == "/claude.png":
+        elif path in ("/claude.png", "/codex.png"):
             try:
-                with open(os.path.join(HERE, "docs", "claude.png"), "rb") as f:
+                with open(os.path.join(HERE, "docs", path[1:]), "rb") as f:
                     self.send(200, "image/png", f.read())
             except OSError:
                 self.send(404, "text/plain", b"not found")
