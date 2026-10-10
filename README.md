@@ -6,7 +6,7 @@ prompt cache, wrote to it and produced, and the files the agent read, searched a
 **Page:** https://zeljkoobrenovic.github.io/agent-session-tracer/ (example sessions embedded; drop your own trace on it);
 the same examples [as a sessions table](https://zeljkoobrenovic.github.io/agent-session-tracer/sessions/).
 
-![A trace: ten turns, the re-sent context climbing every turn on top of a shared prefix, the new context per turn split by origin, tool calls per turn, three files read in short windows](images/trace-page.png)
+![A trace: ten turns, the re-sent context climbing every turn on top of a shared prefix, the new context per turn split by origin, the seconds per turn, tool calls per turn, three files read in short windows, and turn 9 selected with its edit and build in the panel beside the grid](images/trace-page.png)
 
 ## How it works
 
