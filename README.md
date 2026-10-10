@@ -1,6 +1,6 @@
 # Agent session tracer
 
-See what a Claude Code or Codex session cost, turn by turn: one column per API call, the tokens it re-sent from the
+See what a coding agent session (Claude Code or Codex) cost, turn by turn: one column per API call, the tokens it re-sent from the
 prompt cache, wrote to it and produced, and the files the agent read, searched and edited in that turn.
 
 **Page:** https://zeljkoobrenovic.github.io/agent-session-tracer/ (example sessions embedded; drop your own trace on it);
