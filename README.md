@@ -3,7 +3,8 @@
 See what a Claude Code session cost, turn by turn: one column per API call, the tokens it re-sent from the prompt
 cache, wrote to it and produced, and the files the agent read, searched and edited in that turn.
 
-**Page:** https://zeljkoobrenovic.github.io/claude-session-tracer/ (example sessions embedded; drop your own trace on it)
+**Page:** https://zeljkoobrenovic.github.io/claude-session-tracer/ (example sessions embedded; drop your own trace on it);
+the same examples [as a sessions table](https://zeljkoobrenovic.github.io/claude-session-tracer/sessions/).
 
 ![A trace: ten turns, the re-sent context climbing every turn on top of a shared prefix, the new context per turn split by origin, tool calls per turn, three files read in short windows](images/trace-page.png)
 
@@ -43,6 +44,27 @@ machine: the server listens on localhost only.
 Options: `--root` shortens file paths relative to a folder (default: the session's working directory); `--source-root`
 says where the files are now, for their total line counts (default: `--root`); `--title` names the trace.
 
+### All sessions in one table
+
+```bash
+python3 build_sessions.py                                  # the sessions of the folder you are in -> ./sessions/index.html
+python3 build_sessions.py --cwd /path/a --cwd /path/b      # those folders
+python3 build_sessions.py --all --out ~/claude-sessions    # every folder under ~/.claude/projects
+python3 build_sessions.py --all --since 2026-10-01 --min-turns 5   # recent, non-trivial ones only
+```
+
+`build_sessions.py` writes a sessions page, `index.html`, with one row per session: when it started, the folder, the
+first prompt, the model, prompts, turns, cost, active time, tool calls, files read and edited, lines read, edits, the
+tokens re-sent from the cache, new and output, and the session's span. Columns sort, the search box and the folder and
+model selects filter, the tiles and the footer row sum what is listed, and with several folders a table per folder
+follows. Next to it, one trace page per session (`<session id>.html`, the page above with that session embedded and a
+link back), which the rows open. Everything is self-contained; the transcripts are read in parallel (`--jobs`), about a
+second per 50 MB of transcript. `--trace a.json` adds a trace extracted earlier instead of a transcript. The live
+server has the same table at http://localhost:8765/sessions, refreshed every 30 s, whose rows open the session in the
+live trace page (`/?session=<id>`).
+
+![The sessions table: 14 sessions of one folder with their prompts, turns, cost, time, tool calls, files and tokens](images/sessions-page.png)
+
 Claude Code deletes transcripts after its `cleanupPeriodDays` (30 by default), so extract a trace in time or copy the
 transcript.
 
@@ -59,8 +81,9 @@ transcript.
 - **Tool calls.** One chip per call (S search, R read, E edit, B build/test, G git, a tick for the final answer), with
   rows per kind underneath and the lines of output in the totals.
 - **Cost.** The run's recorded cost when the trace has one, otherwise an estimate from the model's list prices (cache
-  reads, 1-hour cache writes, uncached input, output; Haiku 5.5's long-prompt rate per turn). The price table is in
-  `template.html`, dated; the turn detail shows each turn's share.
+  reads, 1-hour cache writes, uncached input, output; Haiku 5.5's long-prompt rate per turn). The price table is
+  `PRICES` in `turn_trace.py`, dated, embedded into the pages by the builders and used for `meta.cost_estimate_usd`;
+  the turn detail shows each turn's share.
 - **Seconds per turn.** The model's time (from the prompt or the previous tool result until the response finished
   streaming) and the time its tools then took, from the transcript's timestamps. Waits between prompts are not counted.
 - **Prompts.** Where each message you typed starts (a numbered mark and a column border); the turns up to the next
@@ -82,7 +105,10 @@ reads.
 
 ```
 {
-  "title": "...", "model": "claude-sonnet-5-5", "meta": {"turns": N, "cache_read_tokens": ..., ...},
+  "title": "...", "model": "claude-sonnet-5-5",
+  "meta": {"transcript": "<id>.jsonl", "cwd": "...", "model": "...", "turns": N, "cache_read_tokens": ..., "cache_write_tokens": ...,
+           "input_tokens": ..., "output_tokens": ..., "started": "...", "ended": "...", "model_s": ..., "tools_s": ..., "duration_s": ...,
+           "cost_estimate_usd": ...},
   "shared_prefix": 10874,        # cache read by the first call: the static prefix shared by every session
   "turns": [ {"n": 1, "input": 2, "cache_read": 10874, "cache_write": 8434, "output": 105,
               "text": "what the agent said (first line)", "result_chars": 3425,
@@ -102,6 +128,8 @@ reads.
 save an agent tokens? below the read budget it does not), Sonnet 5.5 and Haiku 5.5 on the same task against long and
 split files. `build_page.py` embeds them into `docs/index.html` from `template.html`; the page loads nothing from the network
 (its only companion file is the logo), light and dark, and `serve.py` serves the same template in live mode.
+`docs/sessions/` is the sessions table of the same examples (`build_sessions.py --trace examples/*.json --out docs/sessions`),
+from `sessions_template.html`.
 
 ## License
 

@@ -31,6 +31,9 @@ main { max-width: 1400px; margin: 0 auto; padding: 32px 24px 64px; }
 h1 { font-size: 24px; margin: 0 0 4px; }
 .lead { color: var(--muted); margin: 0 0 20px; max-width: 900px; }
 .hint { color: var(--faint); font-size: 13px; }
+.nav { margin: -8px 0 12px; font-size: 14px; }
+.nav a { text-decoration: none; }
+.nav a:hover { text-decoration: underline; }
 p.hint { margin: 8px 0 14px; }
 .files-bar { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 13px; color: var(--muted); margin: -6px 0 10px; }
 .files-bar .group { color: var(--faint); margin-right: -6px; }
@@ -201,6 +204,7 @@ a { color: var(--read); }
   <button type="button" class="icon-btn" id="theme" title="Theme">☀</button>
 </div>
 
+${nav}
 <div class="controls">
   <label class="pick"><span id="pickLabel">Example</span> <select id="pick"></select></label>
   <button type="button" id="openBtn">Open a trace…</button>
@@ -265,7 +269,7 @@ a { color: var(--read); }
   <p>To watch a session while it runs, start <code>python3 serve.py --cwd /path/you/ran/claude/in</code> instead: it opens this page in live mode, following the latest session of that folder and refreshing it every few seconds.</p>
 </details>
 
-<footer>Generated ${generated}. The embedded examples are runs of the <a href="https://github.com/zeljkoobrenovic/sokrates-size-experiment">sokrates-size-experiment</a>; source and extractor at <a href="https://github.com/zeljkoobrenovic/claude-session-tracer">claude-session-tracer</a>. No external resources.</footer>
+<footer>Generated ${generated}. ${note} Source and extractor at <a href="https://github.com/zeljkoobrenovic/claude-session-tracer">claude-session-tracer</a>. No external resources.</footer>
 </main>
 <div class="tip" id="tip"></div>
 <div class="dropzone" id="dropzone" hidden><span>Drop the trace JSON to render it</span></div>
@@ -306,19 +310,8 @@ a { color: var(--read); }
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]; }); }
   function fmt(n) { return n == null ? '–' : Math.round(n).toLocaleString('en-US'); }
-  // List prices in $ per million tokens, platform.claude.com/docs/en/about-claude/pricing as of 2026-10-09:
-  // [input, 5-minute cache write, 1-hour cache write, cache read, output]. Claude Code writes its cache with the 1-hour TTL.
-  var PRICES = {
-    'claude-fable-5-1': [10, 12.5, 20, 0.25, 50], 'claude-mythos-5-1': [10, 12.5, 20, 0.25, 50],
-    'claude-fable-5': [10, 12.5, 20, 1, 50], 'claude-mythos-5': [10, 12.5, 20, 1, 50],
-    'claude-opus-5-5': [4, 5, 8, 0.2, 20], 'claude-opus-5': [5, 6.25, 10, 0.5, 25],
-    'claude-opus-4-8': [5, 6.25, 10, 0.5, 25], 'claude-opus-4-7': [5, 6.25, 10, 0.5, 25], 'claude-opus-4-6': [5, 6.25, 10, 0.5, 25], 'claude-opus-4-5': [5, 6.25, 10, 0.5, 25],
-    'claude-opus-4-1': [15, 18.75, 30, 1.5, 75], 'claude-opus-4': [15, 18.75, 30, 1.5, 75],
-    'claude-sonnet-5-5': [2, 2.5, 4, 0.1, 10], 'claude-sonnet-5': [2, 2.5, 4, 0.2, 10],
-    'claude-sonnet-4-6': [3, 3.75, 6, 0.3, 15], 'claude-sonnet-4-5': [3, 3.75, 6, 0.3, 15], 'claude-sonnet-4': [3, 3.75, 6, 0.3, 15],
-    'claude-haiku-5-5': [0.1, 0.125, 0.2, 0.01, 0.5], 'claude-haiku-5-5:long': [0.5, 0.625, 1, 0.05, 2.5],  // Haiku 5.5: a request whose prompt exceeds 100K tokens pays the second row
-    'claude-haiku-4-5': [1, 1.25, 2, 0.1, 5], 'claude-haiku-3-5': [0.8, 1, 1.6, 0.08, 4]
-  };
+  // List prices in $ per million tokens: turn_trace.PRICES, embedded by the page builders. [input, 5-minute cache write, 1-hour cache write, cache read, output].
+  var PRICES = ${prices};
   var PRICE_KEYS = Object.keys(PRICES).filter(function (k) { return k.indexOf(':') < 0; }).sort(function (a, b) { return b.length - a.length; });
   function priceKey(model) {  // the price row of a model id, also with a date suffix or a cloud prefix
     var m = String(model || ''), i = m.indexOf('claude-');
@@ -737,13 +730,14 @@ a { color: var(--read); }
     box.hidden = false;
     var etag = null, liveTrace = null, failures = 0, interval = Math.max(1, +LIVE.interval || 3);
     var sessionSel = $('session'), sessionId = '', switched = false;  // '' = whatever the server follows (the latest, or the pinned one)
+    try { sessionId = new URLSearchParams(location.search).get('session') || ''; } catch (e) {}  // ?session=<id> opens that session (the sessions page links so)
     function pollSessions() {
       fetch('sessions.json', {cache: 'no-store'}).then(function (r) { return r.json(); }).then(function (d) {
         var cur = sessionSel.value, list = d.sessions || [];
         sessionSel.innerHTML = '<option value="">' + (d.following ? 'pinned: ' + esc(d.following) : 'latest (follows new sessions)') + '</option>' +
           list.map(function (x) { return '<option value="' + esc(x.id) + '">' + esc(x.id.slice(0, 8) + ' \u00B7 ' + x.started + ' \u00B7 ' + x.calls + ' call' + (x.calls === 1 ? '' : 's') + (x.prompt ? ' \u00B7 ' + x.prompt.slice(0, 48) : '')) + '</option>'; }).join('');
-        sessionSel.value = cur;
-        if (sessionSel.value !== cur) { sessionSel.value = ''; sessionId = ''; }
+        sessionSel.value = sessionId || cur;
+        if (sessionSel.value !== (sessionId || cur)) { sessionSel.value = ''; sessionId = ''; }
       }).catch(function () {});
     }
     pollSessions();

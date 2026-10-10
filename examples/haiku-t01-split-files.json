@@ -5,8 +5,7 @@
   "task": "t01-undefined-team-active",
   "kind": "target",
   "variant": "b",
-  "model": "claude-haiku-5-5",
-  "turns": 12,
+  "turns": 10,
   "duration_s": 23.6,
   "cost_usd": 0.008808630000000001,
   "total_input_tokens": 273716,
@@ -17,7 +16,16 @@
   "files_changed": 1,
   "lines_added": 1,
   "lines_deleted": 1,
-  "run_id": "t01-undefined-team-active-b-r07-20261009-154840"
+  "run_id": "t01-undefined-team-active-b-r07-20261009-154840",
+  "transcript": "dc059241-5ccf-4b86-be48-76e1001591c6.jsonl",
+  "cwd": "/Users/zeljkoobrenovic/IdeaProjects/sokrates-size-experiment/work/t01-undefined-team-active-b-r07-20261009-154840/repo",
+  "input_tokens": 20,
+  "model": "claude-haiku-5-5",
+  "model_s": 17.4,
+  "tools_s": 6.2,
+  "started": "2026-10-09T13:48:56.054Z",
+  "ended": "2026-10-09T13:49:17.661Z",
+  "cost_estimate_usd": 0.008809
  },
  "shared_prefix": 10874,
  "turns": [
@@ -37,6 +45,12 @@
      "files": []
     }
    ],
+   "prompt": "You are working in a Java 17 / Maven multi-module repository (Sokrates, a source-code analysis tool that generates HTML reports). Make the change described below.",
+   "at": "2026-10-09T13:48:56.054Z",
+   "seconds": {
+    "model": 1.2,
+    "tools": 0.5
+   },
    "result_chars": 89,
    "new": {
     "prev_output": 0,
@@ -61,6 +75,11 @@
      "files": []
     }
    ],
+   "at": "2026-10-09T13:48:58.170Z",
+   "seconds": {
+    "model": 1.2,
+    "tools": 0.1
+   },
    "result_chars": 89,
    "new": {
     "prev_output": 208,
@@ -151,6 +170,11 @@
      ]
     }
    ],
+   "at": "2026-10-09T13:48:59.080Z",
+   "seconds": {
+    "model": 1.4,
+    "tools": 0.3
+   },
    "result_chars": 1503,
    "new": {
     "prev_output": 191,
@@ -194,6 +218,11 @@
      ]
     }
    ],
+   "at": "2026-10-09T13:49:01.049Z",
+   "seconds": {
+    "model": 1.5,
+    "tools": 0.1
+   },
    "result_chars": 21533,
    "new": {
     "prev_output": 259,
@@ -218,6 +247,11 @@
      "files": []
     }
    ],
+   "at": "2026-10-09T13:49:02.539Z",
+   "seconds": {
+    "model": 1.7,
+    "tools": 0.1
+   },
    "result_chars": 435,
    "new": {
     "prev_output": 310,
@@ -255,6 +289,11 @@
      "files": []
     }
    ],
+   "at": "2026-10-09T13:49:05.486Z",
+   "seconds": {
+    "model": 3.9,
+    "tools": 0.1
+   },
    "result_chars": 367,
    "new": {
     "prev_output": 343,
@@ -280,6 +319,11 @@
      "error": true
     }
    ],
+   "at": "2026-10-09T13:49:08.425Z",
+   "seconds": {
+    "model": 2.0,
+    "tools": 0.0
+   },
    "result_chars": 68,
    "new": {
     "prev_output": 976,
@@ -305,6 +349,11 @@
      "error": true
     }
    ],
+   "at": "2026-10-09T13:49:10.636Z",
+   "seconds": {
+    "model": 1.3,
+    "tools": 0.0
+   },
    "result_chars": 110,
    "new": {
     "prev_output": 439,
@@ -329,6 +378,11 @@
      "files": []
     }
    ],
+   "at": "2026-10-09T13:49:11.901Z",
+   "seconds": {
+    "model": 1.2,
+    "tools": 5.0
+   },
    "result_chars": 31,
    "new": {
     "prev_output": 259,
@@ -353,6 +407,11 @@
      "files": []
     }
    ],
+   "at": "2026-10-09T13:49:17.661Z",
+   "seconds": {
+    "model": 2.0,
+    "tools": 0.0
+   },
    "result_chars": 0,
    "new": {
     "prev_output": 238,

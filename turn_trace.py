@@ -61,6 +61,54 @@ SEARCH_CMDS = {"grep", "rg", "find", "ls", "wc", "fgrep", "egrep", "ag", "tree"}
 BUILD_CMDS = {"mvn", "java", "javac", "./mvnw", "make"}
 CHARS_PER_TOKEN = 2.3  # measured on the experiment transcripts: (cache_write - previous output) / tool result chars, median 2.3 (code, paths, grep output)
 
+# List prices in $ per million tokens, platform.claude.com/docs/en/about-claude/pricing as of 2026-10-09:
+# [input, 5-minute cache write, 1-hour cache write, cache read, output]. Claude Code writes its cache with the 1-hour TTL.
+# The pages get this table embedded (${prices}), so it is the one place to update.
+PRICES_DATE = "2026-10-09"
+PRICES = {
+    "claude-fable-5-1": [10, 12.5, 20, 0.25, 50], "claude-mythos-5-1": [10, 12.5, 20, 0.25, 50],
+    "claude-fable-5": [10, 12.5, 20, 1, 50], "claude-mythos-5": [10, 12.5, 20, 1, 50],
+    "claude-opus-5-5": [4, 5, 8, 0.2, 20], "claude-opus-5": [5, 6.25, 10, 0.5, 25],
+    "claude-opus-4-8": [5, 6.25, 10, 0.5, 25], "claude-opus-4-7": [5, 6.25, 10, 0.5, 25], "claude-opus-4-6": [5, 6.25, 10, 0.5, 25],
+    "claude-opus-4-5": [5, 6.25, 10, 0.5, 25],
+    "claude-opus-4-1": [15, 18.75, 30, 1.5, 75], "claude-opus-4": [15, 18.75, 30, 1.5, 75],
+    "claude-sonnet-5-5": [2, 2.5, 4, 0.1, 10], "claude-sonnet-5": [2, 2.5, 4, 0.2, 10],
+    "claude-sonnet-4-6": [3, 3.75, 6, 0.3, 15], "claude-sonnet-4-5": [3, 3.75, 6, 0.3, 15], "claude-sonnet-4": [3, 3.75, 6, 0.3, 15],
+    "claude-haiku-5-5": [0.1, 0.125, 0.2, 0.01, 0.5],
+    "claude-haiku-5-5:long": [0.5, 0.625, 1, 0.05, 2.5],  # Haiku 5.5: a request whose prompt exceeds 100K tokens pays this row
+    "claude-haiku-4-5": [1, 1.25, 2, 0.1, 5], "claude-haiku-3-5": [0.8, 1, 1.6, 0.08, 4],
+}
+PRICE_KEYS = sorted((k for k in PRICES if ":" not in k), key=len, reverse=True)
+
+
+def price_key(model):
+    """The price row of a model id, also with a date suffix or a cloud prefix; None when unknown."""
+    m = str(model or "")
+    i = m.find("claude-")
+    if i < 0:
+        return None
+    m = m[i:]
+    for k in PRICE_KEYS:
+        if m == k or m.startswith(k + "-"):
+            return k
+    return None
+
+
+def turn_cost(turn, key):
+    p = PRICES[key]
+    if key == "claude-haiku-5-5" and turn.get("cache_read", 0) + turn.get("cache_write", 0) + turn.get("input", 0) > 100000:
+        p = PRICES["claude-haiku-5-5:long"]
+    return (turn.get("input", 0) * p[0] + turn.get("cache_write", 0) * p[2] + turn.get("cache_read", 0) * p[3]
+            + turn.get("output", 0) * p[4]) / 1e6
+
+
+def estimate_cost(turns, model):
+    """What the turns cost at list prices (cache reads, 1-hour cache writes, uncached input, output); None for an unknown model."""
+    key = price_key(model)
+    if key is None:
+        return None
+    return round(sum(turn_cost(t, key) for t in turns), 6)
+
 
 def transcripts_for(cwd):
     slug = re.sub(r"[^A-Za-z0-9]", "-", os.path.abspath(cwd))
@@ -464,9 +512,83 @@ def trace_for(transcript, root=None, source_root=None, title=None):
         meta["model_s"] = round(sum(t["seconds"]["model"] for t in timed), 1)
         meta["tools_s"] = round(sum(t["seconds"]["tools"] for t in timed), 1)
         meta["duration_s"] = round(meta["model_s"] + meta["tools_s"], 1)  # active time; the waits between prompts are not in it
+    stamps = [t["at"] for t in turns if t.get("at")]
+    if stamps:
+        meta["started"], meta["ended"] = min(stamps), max(stamps)
+    cost = estimate_cost(turns, model)
+    if cost is not None:
+        meta["cost_estimate_usd"] = cost
     files = build(turns, results, prefix, source_root or root or cwd)
     return {"title": title or os.path.basename(transcript)[:8] + " · " + (cwd or ""), "model": model,
             "meta": meta, "shared_prefix": turns[0]["cache_read"] if turns else 0, "turns": turns, "files": files}
+
+
+def session_stats(trace, transcript=None):
+    """One row of the sessions table: the trace's totals (see build_sessions.py). Tokens and time as in the page's tiles."""
+    turns, files, m = trace.get("turns") or [], trace.get("files") or [], trace.get("meta") or {}
+    cwd = m.get("cwd") or ""
+    first = next((t["prompt"] for t in turns if t.get("prompt")), "")
+    started, ended = m.get("started"), m.get("ended")
+    span = None
+    if started and ended:
+        try:
+            span = round(datetime.datetime.fromisoformat(ended.replace("Z", "+00:00")).timestamp()
+                         - datetime.datetime.fromisoformat(started.replace("Z", "+00:00")).timestamp(), 1)
+        except ValueError:
+            pass
+    sid = (m.get("transcript") or os.path.basename(transcript or "") or trace.get("title") or "")
+    sid = sid[:-6] if sid.endswith(".jsonl") else sid
+    row = {"id": sid, "title": trace.get("title") or sid, "cwd": cwd, "folder": os.path.basename(cwd.rstrip("/")) or cwd,
+           "model": m.get("model") or trace.get("model") or "", "started": started, "ended": ended, "span_s": span,
+           "turns": len(turns), "prompts": sum(1 for t in turns if t.get("prompt")), "first_prompt": first,
+           "tool_calls": sum(1 for t in turns for x in t.get("tools") or [] if x.get("kind") != "text"),
+           "files_read": sum(1 for f in files if f.get("read")), "files_edited": sum(1 for f in files if f.get("edits")),
+           "lines_read": sum(f.get("read") or 0 for f in files), "edits": sum(f.get("edits") or 0 for f in files),
+           "cache_read": sum(t.get("cache_read", 0) for t in turns), "cache_write": sum(t.get("cache_write", 0) for t in turns),
+           "input": sum(t.get("input", 0) for t in turns), "output": sum(t.get("output", 0) for t in turns),
+           "cost_usd": m.get("cost_usd"), "cost_estimate_usd": m.get("cost_estimate_usd"),
+           "model_s": m.get("model_s"), "tools_s": m.get("tools_s"), "duration_s": m.get("duration_s")}
+    if transcript and os.path.isfile(transcript):
+        row["transcript_bytes"] = os.path.getsize(transcript)
+    return row
+
+
+def project_folders():
+    """Every folder under ~/.claude/projects that holds transcripts, newest first, with its transcripts."""
+    out = []
+    for d in glob.glob(os.path.join(PROJECTS, "*")):
+        files = sorted(glob.glob(os.path.join(d, "*.jsonl")), key=os.path.getmtime)
+        if files:
+            out.append((d, files))
+    return sorted(out, key=lambda x: os.path.getmtime(x[1][-1]), reverse=True)
+
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+EXAMPLES_NOTE = ('The embedded examples are runs of the <a href="https://github.com/zeljkoobrenovic/sokrates-size-experiment">'
+                 'sokrates-size-experiment</a>;')
+
+
+def html_escape(s):
+    return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+
+def json_for_html(obj):
+    """JSON safe inside a <script> element."""
+    return json.dumps(obj).replace("</", "<\\/")
+
+
+def fill_template(name, **subs):
+    """A page from one of the templates next to this script, its ${...} placeholders filled: examples (a list of traces),
+    live (the live-mode config or None), nav (HTML above the controls), note (the footer sentence), sessions (the
+    sessions page's rows); prices and generated are always filled."""
+    text = open(os.path.join(HERE, name), encoding="utf-8").read()
+    values = {"prices": json_for_html(PRICES), "generated": datetime.date.today().isoformat(),
+              "examples": json_for_html(subs.pop("examples", [])), "live": json_for_html(subs.pop("live", None)),
+              "nav": "", "note": "", "sessions": json_for_html(subs.pop("sessions", None)), "prices_date": PRICES_DATE}
+    values.update(subs)
+    for k, v in values.items():
+        text = text.replace("${" + k + "}", v)
+    return text
 
 
 def main():

@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Sessions</title>
+<link rel="icon" type="image/png" href="claude.png">
+<meta name="description" content="Every Claude Code session of a folder in one table: turns, prompts, tokens, cost and time, each row opening the session's turn-by-turn trace.">
+<script>(function () { var th = 'light'; try { th = localStorage.getItem('trace-theme') || th; } catch (e) {} document.documentElement.setAttribute('data-theme', th === 'dark' || th === 'auto' ? th : 'light'); })();</script>
+<style>
+:root {
+  --bg: #fcfcfb; --surface: #ffffff; --surface-2: #f3f2ef; --border: #dedcd6; --text: #0b0b0b; --muted: #52514e; --faint: #8a8984;
+  --read: #2a78d6; --read-soft: #cde2fb; --write: #eb6834; --write-soft: #fbd9cb; --output: #1baf7a; --output-soft: #c8efdf;
+  --error: #e34948; --setup: #eda100; --prefix: #86b6ef; --sel: #e4eefb; --sel-strong: #2a78d6;
+}
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] {
+  --bg: #1a1a19; --surface: #232322; --surface-2: #2c2c2a; --border: #3d3d3a; --text: #ffffff; --muted: #c3c2b7; --faint: #8a8984;
+  --read: #3987e5; --read-soft: #1c3d66; --write: #d95926; --write-soft: #5a2a16; --output: #199e70; --output-soft: #174436; --setup: #c98500; --prefix: #1c5cab; --sel: #1f3350; --sel-strong: #5a9cf0;
+} }
+:root[data-theme="dark"] {
+  --bg: #1a1a19; --surface: #232322; --surface-2: #2c2c2a; --border: #3d3d3a; --text: #ffffff; --muted: #c3c2b7; --faint: #8a8984;
+  --read: #3987e5; --read-soft: #1c3d66; --write: #d95926; --write-soft: #5a2a16; --output: #199e70; --output-soft: #174436; --setup: #c98500; --prefix: #1c5cab; --sel: #1f3350; --sel-strong: #5a9cf0;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+main { max-width: 1400px; margin: 0 auto; padding: 32px 24px 64px; }
+.top { display: flex; align-items: flex-start; gap: 16px; }
+.logo { width: 78px; height: 78px; flex: none; margin-top: 2px; }
+.top > div { flex: 1; min-width: 0; }
+h1 { font-size: 24px; margin: 0 0 4px; }
+h2 { font-size: 16px; margin: 28px 0 8px; }
+.lead { color: var(--muted); margin: 0 0 20px; max-width: 900px; }
+.hint { color: var(--faint); font-size: 13px; }
+a { color: var(--read); }
+select, button, input { font: inherit; font-size: 14px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; }
+button { cursor: pointer; }
+button:hover { background: var(--surface-2); }
+.icon-btn { width: 34px; height: 34px; padding: 0; font-size: 16px; line-height: 1; flex: none; }
+:focus-visible { outline: 2px solid var(--sel-strong); outline-offset: 1px; }
+.msg { margin: 12px 0; padding: 10px 14px; border-radius: 6px; font-size: 14px; background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+.msg.error { color: var(--error); border-color: var(--error); }
+.tiles { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 20px; }
+.tile { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 12px 18px; min-width: 130px; }
+.tile .v { display: block; font-size: 20px; font-weight: 600; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.tile .l { display: block; font-size: 12px; color: var(--muted); }
+.tile .s { display: block; font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.filters { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; margin: 0 0 14px; padding: 12px 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-size: 14px; color: var(--muted); }
+.filters label { display: inline-flex; align-items: center; gap: 6px; }
+.filters select { max-width: 320px; }
+.filters input[type=search] { width: 260px; }
+.filters .spacer { flex: 1; }
+.live { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+.live .pulse { width: 9px; height: 9px; border-radius: 50%; background: var(--output); animation: pulse 2s infinite; flex: none; }
+.live.error .pulse { background: var(--error); animation: none; }
+.live.waiting .pulse { background: var(--setup); animation: none; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 var(--output-soft); } 70% { box-shadow: 0 0 0 6px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+.twrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); max-height: calc(100vh - 40px); overflow-y: auto; }
+table.sessions, table.folders { border-collapse: separate; border-spacing: 0; font-size: 13px; width: 100%; }
+.sessions th, .sessions td, .folders th, .folders td { padding: 6px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; white-space: nowrap; }
+.sessions thead th, .folders thead th { position: sticky; top: 0; z-index: 2; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); background: var(--surface-2); font-weight: 600; cursor: pointer; user-select: none; }
+.sessions thead th:hover, .folders thead th:hover { color: var(--text); }
+.sessions thead th.on, .folders thead th.on { color: var(--text); box-shadow: inset 0 -2px 0 var(--sel-strong); }
+.sessions thead th .arr { color: var(--faint); margin-left: 3px; font-size: 10px; }
+.sessions th.num, .sessions td.num, .folders th.num, .folders td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.sessions tbody tr { cursor: pointer; }
+.sessions tbody tr:hover td, .folders tbody tr:hover td { background: var(--surface-2); }
+.sessions tbody tr:last-child td, .folders tbody tr:last-child td { border-bottom: 0; }
+.sessions td.prompt { max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sessions td.folder { max-width: 200px; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
+.sessions td.id a { font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; text-decoration: none; }
+.sessions td.id a:hover { text-decoration: underline; }
+.sessions td.when { color: var(--muted); }
+.sessions td.model { color: var(--muted); }
+.sessions td.cost { white-space: nowrap; }
+.sessions td.cost.est { color: var(--muted); }
+.bar { display: inline-block; width: 60px; height: 7px; background: var(--surface-2); border-radius: 4px; vertical-align: middle; margin-right: 8px; overflow: hidden; border: 1px solid var(--border); }
+.bar span { display: block; height: 100%; background: var(--read); border-radius: 4px; }
+.bar.cost span { background: var(--write); }
+.sessions tfoot td, .folders tfoot td { color: var(--muted); font-weight: 600; background: var(--surface-2); border-top: 1px solid var(--border); border-bottom: 0; position: sticky; bottom: 0; }
+.folders { width: auto; min-width: 520px; }
+.folders td.name { font-weight: 500; }
+.folders tbody tr { cursor: pointer; }
+details.help { margin: 24px 0; max-width: 980px; font-size: 14px; color: var(--muted); border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 12px 18px; }
+details.help[open] { padding-bottom: 16px; }
+details.help summary { cursor: pointer; color: var(--text); font-weight: 500; }
+details.help summary:hover { text-decoration: underline; }
+details.help p { margin: 10px 0; line-height: 1.6; }
+details.help code, .filters code { font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+.empty { padding: 24px; color: var(--faint); text-align: center; }
+footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--border); }
+@media (max-width: 700px) {
+  main { padding: 20px 16px 40px; }
+  h1 { font-size: 20px; }
+  .logo { width: 36px; height: 36px; }
+  .top { gap: 12px; }
+  .tile { padding: 10px 14px; min-width: 0; flex: 1 1 100px; }
+  .filters { padding: 10px 12px; }
+  .filters input[type=search] { width: 100%; }
+  .sessions td.prompt { max-width: 220px; }
+  .twrap { max-height: none; }
+}
+</style>
+</head>
+<body>
+<main>
+<div class="top">
+  <img class="logo" src="claude.png" alt="" width="78" height="78">
+  <div>
+    <h1>Claude Sessions <span class="hint" id="scope"></span></h1>
+    <p class="lead" id="lead">Every Claude Code session in one table: what each one took in turns, prompts, tokens, cost and time, and where the agent read and wrote. A row opens the session's turn-by-turn trace.</p>
+  </div>
+  <button type="button" class="icon-btn" id="theme" title="Theme">☀</button>
+</div>
+<div class="msg" id="msg" hidden></div>
+<div class="tiles" id="tiles"></div>
+<div class="filters">
+  <label>search <input type="search" id="q" placeholder="prompt, folder, model, id…" size="30"></label>
+  <label id="folderWrap" hidden>folder <select id="folder"><option value="">all</option></select></label>
+  <label id="modelWrap" hidden>model <select id="model"><option value="">all</option></select></label>
+  <label title="Sessions with fewer than this many API calls, such as one-line questions and aborted starts"><input type="checkbox" id="hideShort"> hide sessions under <input type="number" id="minTurns" value="5" min="1" max="999" style="width:58px"> turns</label>
+  <span class="hint" id="count"></span>
+  <span class="spacer"></span>
+  <span class="live" id="live" hidden><span class="pulse"></span><span id="liveStatus">loading…</span></span>
+</div>
+<div class="twrap"><table class="sessions" id="table" aria-label="Sessions"></table></div>
+<section id="byFolder" hidden></section>
+
+<details class="help">
+  <summary>How to read this table</summary>
+  <p>One row per session, that is one Claude Code transcript: interactive sessions and <code>claude -p</code> runs alike. Click a column heading to sort, type in the search box to filter (prompt, folder, model and session id are searched), pick a folder or a model; the tiles sum what is listed. A row opens the session in the trace page, turn by turn.</p>
+  <p><b>Prompts</b> are the messages you typed; <b>turns</b> the API calls they took. <b>Re-sent</b> is the context read from the prompt cache over all turns, the whole conversation re-sent with each call, which is where most of a session's tokens go. <b>New</b> is what the calls added to it (tool results, the agent's own words, the setup and the reminders) plus the few tokens sent uncached; <b>output</b> what the model wrote. <b>Files</b> counts the files read and edited, <b>lines read</b> the lines of those files that tool output returned, <b>edits</b> the edit calls.</p>
+  <p><b>Cost</b> is the recorded cost when the trace has one, otherwise an estimate at list prices (${prices_date}: cache reads, 1-hour cache writes, uncached input, output), shown in grey. The bar is the share of the most expensive listed session. <b>Active</b> time is the model's time plus its tools' time, without the waits between your prompts; <b>span</b> runs from the first API call to the last.</p>
+  <p>Built from the transcripts Claude Code keeps under <code>~/.claude/projects</code> (deleted after 30 days by default) with <code>build_sessions.py</code> from the <a href="https://github.com/zeljkoobrenovic/claude-session-tracer">claude-session-tracer</a> repository; <code>serve.py</code> serves the same table live.</p>
+</details>
+
+<footer>Generated ${generated}. ${note} Source and extractor at <a href="https://github.com/zeljkoobrenovic/claude-session-tracer">claude-session-tracer</a>. No external resources.</footer>
+</main>
+<script id="data" type="application/json">${sessions}</script>
+<script id="liveConfig" type="application/json">${live}</script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var DATA = null; try { DATA = JSON.parse($('data').textContent); } catch (e) {}
+  var LIVE = null; try { LIVE = JSON.parse($('liveConfig').textContent); } catch (e) {}
+  var rows = (DATA && DATA.sessions) || [], TITLE = (DATA && DATA.title) || '';
+  var table = $('table'), tiles = $('tiles'), q = $('q'), folderSel = $('folder'), modelSel = $('model'), hideShort = $('hideShort'), minTurns = $('minTurns'), count = $('count');
+  var sortKey = 'started', sortDir = -1;
+
+  var THEMES = ['light', 'dark', 'auto'], ICON = {light: '☀', dark: '☾', auto: '◐'}, NAME = {light: 'light', dark: 'dark', auto: 'auto (follows the system)'};
+  var theme = 'light'; try { theme = localStorage.getItem('trace-theme') || 'light'; } catch (e) {}
+  if (THEMES.indexOf(theme) < 0) theme = 'light';
+  function applyTheme() { document.documentElement.setAttribute('data-theme', theme); var b = $('theme'); b.textContent = ICON[theme]; b.title = 'Theme: ' + NAME[theme] + ' (click to change)'; }
+  applyTheme();
+  $('theme').addEventListener('click', function () { theme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length]; try { localStorage.setItem('trace-theme', theme); } catch (e) {} applyTheme(); });
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]; }); }
+  function fmt(n) { return n == null ? '–' : Math.round(n).toLocaleString('en-US'); }
+  function fmtK(n) { return n == null ? '–' : n >= 1e9 ? (n / 1e9).toFixed(1) + 'B' : n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e4 ? Math.round(n / 1e3) + 'k' : fmt(n); }
+  function fmtUsd(x) { return x == null ? '–' : '$' + (x < 0.01 ? x.toFixed(4) : x < 1 ? x.toFixed(3) : x < 100 ? x.toFixed(2) : Math.round(x).toLocaleString('en-US')); }
+  function fmtS(s) { if (s == null) return '–'; if (s >= 86400) return Math.floor(s / 86400) + 'd ' + Math.round(s % 86400 / 3600) + 'h'; if (s >= 3600) return Math.floor(s / 3600) + 'h ' + Math.round(s % 3600 / 60) + 'm'; if (s >= 60) return Math.floor(s / 60) + 'm ' + ('0' + Math.round(s % 60)).slice(-2) + 's'; return Math.round(s) + ' s'; }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function fmtWhen(iso) { if (!iso) return '–'; var d = new Date(iso); if (isNaN(d)) return iso; return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+  function shortModel(m) { return String(m || '').replace(/^.*?claude-/, '').replace(/-\d{8}$/, ''); }
+  function cost(r) { return r.cost_usd != null ? r.cost_usd : r.cost_estimate_usd; }
+  function newTok(r) { return (r.cache_write || 0) + (r.input || 0); }
+  function tokens(r) { return (r.cache_read || 0) + newTok(r) + (r.output || 0); }
+
+  var COLS = [
+    {k: 'started', l: 'started', cls: 'when', v: function (r) { return r.started || ''; }, h: function (r) { return fmtWhen(r.started); }, tip: function (r) { return r.ended ? 'first call ' + fmtWhen(r.started) + ', last ' + fmtWhen(r.ended) : ''; }},
+    {k: 'folder', l: 'folder', cls: 'folder', v: function (r) { return r.folder || ''; }, h: function (r) { return esc(r.folder); }, tip: function (r) { return r.cwd; }},
+    {k: 'id', l: 'session', cls: 'id', v: function (r) { return r.id; }, h: function (r) { return '<a href="' + esc(r.page || '#') + '">' + esc(r.id.length === 36 ? r.id.slice(0, 8) : r.id) + '</a>'; }, tip: function (r) { return r.id + (r.title && r.title !== r.id && r.title !== r.first_prompt ? '\n' + r.title : ''); }},
+    {k: 'first_prompt', l: 'first prompt', cls: 'prompt', v: function (r) { return r.first_prompt || ''; }, h: function (r) { return r.first_prompt ? esc(r.first_prompt) : '<span class="hint">(none)</span>'; }, tip: function (r) { return r.first_prompt; }},
+    {k: 'model', l: 'model', cls: 'model', v: function (r) { return r.model || ''; }, h: function (r) { return esc(shortModel(r.model)); }, tip: function (r) { return r.model; }},
+    {k: 'prompts', l: 'prompts', num: true, v: function (r) { return r.prompts || 0; }},
+    {k: 'turns', l: 'turns', num: true, v: function (r) { return r.turns || 0; }},
+    {k: 'cost', l: 'cost', cls: 'cost', num: true, v: function (r) { return cost(r) || 0; }, h: function (r, ctx) { var c = cost(r); return c == null ? '<span class="hint">–</span>' : '<span class="bar cost"><span style="width:' + (ctx.maxCost ? Math.min(100, 100 * c / ctx.maxCost).toFixed(1) : 0) + '%"></span></span>' + fmtUsd(c); },
+      cls2: function (r) { return r.cost_usd == null ? 'est' : ''; }, tip: function (r) { return r.cost_usd != null ? 'as recorded' + (r.cost_estimate_usd != null ? '; list-price estimate ' + fmtUsd(r.cost_estimate_usd) : '') : r.cost_estimate_usd != null ? 'estimated at list prices' : 'unknown model, no estimate'; }},
+    {k: 'duration_s', l: 'active', num: true, v: function (r) { return r.duration_s || 0; }, h: function (r) { return fmtS(r.duration_s); }, tip: function (r) { return r.model_s != null ? fmtS(r.model_s) + ' model, ' + fmtS(r.tools_s) + ' tools' : ''; }},
+    {k: 'tool_calls', l: 'tool calls', num: true, v: function (r) { return r.tool_calls || 0; }},
+    {k: 'files', l: 'files read / edited', num: true, v: function (r) { return (r.files_read || 0) + (r.files_edited || 0); }, h: function (r) { return fmt(r.files_read) + ' / ' + fmt(r.files_edited); }},
+    {k: 'lines_read', l: 'lines read', num: true, v: function (r) { return r.lines_read || 0; }},
+    {k: 'edits', l: 'edits', num: true, v: function (r) { return r.edits || 0; }},
+    {k: 'cache_read', l: 're-sent', num: true, v: function (r) { return r.cache_read || 0; }, h: function (r) { return fmtK(r.cache_read); }, tip: function (r) { return fmt(r.cache_read) + ' tokens read from the cache over all turns'; }},
+    {k: 'new', l: 'new', num: true, v: newTok, h: function (r) { return fmtK(newTok(r)); }, tip: function (r) { return fmt(r.cache_write) + ' written to the cache + ' + fmt(r.input) + ' uncached'; }},
+    {k: 'output', l: 'output', num: true, v: function (r) { return r.output || 0; }, h: function (r) { return fmtK(r.output); }, tip: function (r) { return fmt(r.output) + ' output tokens'; }},
+    {k: 'span_s', l: 'span', num: true, v: function (r) { return r.span_s || 0; }, h: function (r) { return fmtS(r.span_s); }, tip: function (r) { return 'from the first API call to the last'; }}
+  ];
+  var byKey = {}; COLS.forEach(function (c) { byKey[c.k] = c; });
+
+  function options(sel, values, label) {
+    var cur = sel.value;
+    sel.innerHTML = '<option value="">all</option>' + values.map(function (v) { return '<option value="' + esc(v[0]) + '">' + esc(label(v[0])) + ' (' + v[1] + ')</option>'; }).join('');
+    sel.value = cur; if (sel.value !== cur) sel.value = '';
+  }
+  function counts(key) {
+    var m = {}; rows.forEach(function (r) { var v = r[key] || ''; if (v) m[v] = (m[v] || 0) + 1; });
+    return Object.keys(m).sort(function (a, b) { return m[b] - m[a] || a.localeCompare(b); }).map(function (k) { return [k, m[k]]; });
+  }
+  function setup() {
+    var folders = counts('folder'), models = counts('model');
+    $('folderWrap').hidden = folders.length < 2; options(folderSel, folders, function (v) { return v; });
+    $('modelWrap').hidden = models.length < 2; options(modelSel, models, function (v) { return shortModel(v); });
+    $('scope').textContent = TITLE ? '· ' + TITLE : '';
+    if (TITLE) document.title = 'Claude Sessions · ' + TITLE;
+  }
+
+  function filtered() {
+    var text = q.value.trim().toLowerCase(), f = folderSel.value, m = modelSel.value, min = hideShort.checked ? Math.max(1, +minTurns.value || 1) : 0;
+    return rows.filter(function (r) {
+      if (f && r.folder !== f) return false;
+      if (m && r.model !== m) return false;
+      if (min && (r.turns || 0) < min) return false;
+      if (text) { var hay = [r.first_prompt, r.folder, r.cwd, r.model, r.id, r.title].join(' ').toLowerCase(); if (hay.indexOf(text) < 0) return false; }
+      return true;
+    });
+  }
+
+  function tile(label, value, sub) { return '<div class="tile"><span class="v">' + value + '</span><span class="l">' + esc(label) + '</span>' + (sub ? '<span class="s">' + sub + '</span>' : '') + '</div>'; }
+  function sum(list, fn) { return list.reduce(function (a, r) { var v = fn(r); return a + (v || 0); }, 0); }
+
+  function render() {
+    var list = filtered(), col = byKey[sortKey] || byKey.started;
+    list.sort(function (a, b) { var x = col.v(a), y = col.v(b); return (typeof x === 'string' ? x.localeCompare(y) : x - y) * sortDir || (b.started || '').localeCompare(a.started || ''); });
+    var folders = {}; list.forEach(function (r) { folders[r.folder] = 1; });
+    var nf = Object.keys(folders).length, costs = list.map(cost).filter(function (c) { return c != null; }), total = costs.reduce(function (a, c) { return a + c; }, 0);
+    var recorded = list.filter(function (r) { return r.cost_usd != null; }).length, known = costs.length;
+    var active = sum(list, function (r) { return r.duration_s; }), span = sum(list, function (r) { return r.span_s; }), uncached = sum(list, function (r) { return r.input; });
+    var starts = list.map(function (r) { return r.started || ''; }).filter(Boolean).sort(), first = starts[0], last = starts[starts.length - 1];
+    tiles.innerHTML =
+      tile('sessions', fmt(list.length), (nf > 1 ? nf + ' folders · ' : '') + fmt(sum(list, function (r) { return r.prompts; })) + ' prompts' + (first && last ? ' · ' + first.slice(0, 10) + (last.slice(0, 10) !== first.slice(0, 10) ? ' to ' + last.slice(0, 10) : '') : '')) +
+      tile('turns', fmt(sum(list, function (r) { return r.turns; })), fmt(sum(list, function (r) { return r.tool_calls; })) + ' tool calls') +
+      tile('tokens re-sent', fmtK(sum(list, function (r) { return r.cache_read; })), 'read from the cache') +
+      tile('tokens new', fmtK(sum(list, newTok)), 'written to the cache' + (uncached ? ' · ' + fmtK(uncached) + ' uncached' : '')) +
+      tile('tokens out', fmtK(sum(list, function (r) { return r.output; }))) +
+      (known ? tile('cost', fmtUsd(total), recorded === known ? 'as recorded' : recorded ? recorded + ' recorded, ' + (known - recorded) + ' estimated' : 'estimated at list prices' + (known < list.length ? ' · ' + (list.length - known) + ' unknown' : '')) : '') +
+      (active ? tile('active time', fmtS(active), 'model and tools, waits left out') : '') +
+      tile('files edited', fmt(sum(list, function (r) { return r.files_edited; })), fmt(sum(list, function (r) { return r.edits; })) + ' edits · ' + fmt(sum(list, function (r) { return r.lines_read; })) + ' lines read');
+    count.textContent = list.length === rows.length ? '' : list.length + ' of ' + rows.length + ' sessions';
+    var ctx = {maxCost: Math.max.apply(null, costs.concat([0]))};
+    var showFolder = counts('folder').length > 1;
+    var h = '<thead><tr>' + COLS.map(function (c) {
+      if (c.k === 'folder' && !showFolder) return '';
+      return '<th class="' + (c.num ? 'num' : '') + (c.k === sortKey ? ' on' : '') + '" data-sort="' + c.k + '">' + esc(c.l) + (c.k === sortKey ? '<span class="arr">' + (sortDir > 0 ? '▲' : '▼') + '</span>' : '') + '</th>';
+    }).join('') + '</tr></thead><tbody>';
+    if (!list.length) h += '<tr><td colspan="' + COLS.length + '" class="empty">' + (rows.length ? 'No session matches the filters.' : 'No sessions.') + '</td></tr>';
+    list.forEach(function (r) {
+      h += '<tr data-page="' + esc(r.page || '') + '">' + COLS.map(function (c) {
+        if (c.k === 'folder' && !showFolder) return '';
+        var tip = c.tip ? c.tip(r) : '';
+        return '<td class="' + (c.num ? 'num ' : '') + (c.cls || '') + (c.cls2 ? ' ' + c.cls2(r) : '') + '"' + (tip ? ' title="' + esc(tip) + '"' : '') + '>' + (c.h ? c.h(r, ctx) : fmt(c.v(r))) + '</td>';
+      }).join('') + '</tr>';
+    });
+    h += '</tbody>';
+    if (list.length > 1) {
+      h += '<tfoot><tr>' + COLS.map(function (c) {
+        if (c.k === 'folder' && !showFolder) return '';
+        var v;
+        if (c.k === 'started') v = list.length + ' sessions';
+        else if (c.k === 'files') v = fmt(sum(list, function (r) { return r.files_read; })) + ' / ' + fmt(sum(list, function (r) { return r.files_edited; }));
+        else if (c.k === 'cost') v = known ? fmtUsd(total) : '';
+        else if (c.k === 'duration_s') v = fmtS(active);
+        else if (c.k === 'span_s') v = fmtS(span);
+        else if (c.k === 'cache_read' || c.k === 'new' || c.k === 'output') v = fmtK(sum(list, c.v));
+        else if (c.num) v = fmt(sum(list, c.v));
+        else v = '';
+        return '<td class="' + (c.num ? 'num' : '') + '">' + v + '</td>';
+      }).join('') + '</tr></tfoot>';
+    }
+    table.innerHTML = h;
+    renderFolders(list, showFolder);
+  }
+
+  function renderFolders(list, show) {
+    var sec = $('byFolder');
+    if (!show) { sec.hidden = true; sec.innerHTML = ''; return; }
+    var by = {};
+    list.forEach(function (r) {
+      var f = by[r.folder] = by[r.folder] || {folder: r.folder, cwd: r.cwd, n: 0, turns: 0, prompts: 0, resent: 0, nw: 0, out: 0, cost: 0, costN: 0, active: 0, last: ''};
+      f.n++; f.turns += r.turns || 0; f.prompts += r.prompts || 0; f.resent += r.cache_read || 0; f.nw += newTok(r); f.out += r.output || 0; f.active += r.duration_s || 0;
+      var c = cost(r); if (c != null) { f.cost += c; f.costN++; }
+      if ((r.started || '') > f.last) f.last = r.started || '';
+    });
+    var fs = Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return b.cost - a.cost || b.turns - a.turns; });
+    var h = '<h2>By folder</h2><div class="twrap"><table class="folders"><thead><tr><th>folder</th><th class="num">sessions</th><th class="num">prompts</th><th class="num">turns</th><th class="num">re-sent</th><th class="num">new</th><th class="num">output</th><th class="num">cost</th><th class="num">active</th><th>last session</th></tr></thead><tbody>';
+    fs.forEach(function (f) {
+      h += '<tr data-folder="' + esc(f.folder) + '" title="' + esc(f.cwd + '\nclick to list only this folder') + '"><td class="name">' + esc(f.folder) + '</td><td class="num">' + f.n + '</td><td class="num">' + fmt(f.prompts) + '</td><td class="num">' + fmt(f.turns) + '</td><td class="num">' + fmtK(f.resent) + '</td><td class="num">' + fmtK(f.nw) + '</td><td class="num">' + fmtK(f.out) + '</td><td class="num">' + (f.costN ? fmtUsd(f.cost) : '–') + '</td><td class="num">' + fmtS(f.active) + '</td><td>' + fmtWhen(f.last) + '</td></tr>';
+    });
+    sec.innerHTML = h + '</tbody></table></div>';
+    sec.hidden = false;
+  }
+
+  table.addEventListener('click', function (e) {
+    var th = e.target.closest('th[data-sort]');
+    if (th) { var k = th.getAttribute('data-sort'); if (k === sortKey) sortDir = -sortDir; else { sortKey = k; sortDir = byKey[k].num || k === 'started' ? -1 : 1; } render(); return; }
+    if (e.target.closest('a')) return;
+    var tr = e.target.closest('tr[data-page]');
+    if (tr && tr.getAttribute('data-page')) { if (e.metaKey || e.ctrlKey) window.open(tr.getAttribute('data-page')); else location.href = tr.getAttribute('data-page'); }
+  });
+  $('byFolder').addEventListener('click', function (e) {
+    var tr = e.target.closest('tr[data-folder]');
+    if (tr) { folderSel.value = tr.getAttribute('data-folder'); if (folderSel.value !== tr.getAttribute('data-folder')) folderSel.value = ''; render(); window.scrollTo({top: 0, behavior: 'smooth'}); }
+  });
+  [q, folderSel, modelSel, hideShort, minTurns].forEach(function (el) { el.addEventListener(el === q || el === minTurns ? 'input' : 'change', render); });
+  q.addEventListener('keydown', function (e) { if (e.key === 'Escape') { q.value = ''; render(); } });
+  try { var saved = JSON.parse(localStorage.getItem('sessions-view') || '{}'); if (saved.hideShort) hideShort.checked = true; if (saved.minTurns) minTurns.value = saved.minTurns; if (saved.sortKey && byKey[saved.sortKey]) { sortKey = saved.sortKey; sortDir = saved.sortDir || -1; } } catch (e) {}
+  var _render = render;
+  render = function () { _render(); try { localStorage.setItem('sessions-view', JSON.stringify({hideShort: hideShort.checked, minTurns: minTurns.value, sortKey: sortKey, sortDir: sortDir})); } catch (e) {} };
+
+  function startLive() {
+    var box = $('live'), status = $('liveStatus'), interval = Math.max(5, +LIVE.interval || 30), failures = 0;
+    box.hidden = false;
+    TITLE = TITLE || (LIVE.cwd || '').split('/').filter(Boolean).pop() || '';
+    function setStatus(kind, html) { box.className = 'live' + (kind === 'ok' ? '' : ' ' + kind); status.innerHTML = html; }
+    function poll() {
+      setStatus('waiting', rows.length ? 'refreshing…' : 'extracting the sessions…');
+      fetch('stats.json', {cache: 'no-store'}).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then(function (d) {
+        failures = 0;
+        rows = d.sessions || [];
+        setup(); render();
+        setStatus('ok', 'live · ' + rows.length + ' session' + (rows.length === 1 ? '' : 's') + ' · updated ' + new Date(d.updated || Date.now()).toLocaleTimeString('en-GB') + ' · refreshes every ' + interval + ' s');
+      }).catch(function (err) { failures++; setStatus('error', 'server not reachable (' + esc(err.message) + ') · retrying'); })
+        .then(function () { setTimeout(poll, interval * 1000 * Math.min(failures + 1, 5)); });
+    }
+    poll();
+  }
+
+  setup();
+  render();
+  if (LIVE) startLive();
+  else if (!rows.length) { var m = $('msg'); m.textContent = 'No sessions are embedded. Build this page with build_sessions.py.'; m.hidden = false; }
+})();
+</script>
+</body>
+</html>

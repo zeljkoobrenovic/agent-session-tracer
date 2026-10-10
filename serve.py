@@ -10,8 +10,9 @@ Usage:
 
 The page is template.html with no examples embedded; /trace.json is the trace of the transcript, re-extracted only
 when the transcript file changes (ETag, so an unchanged poll costs nothing); /trace.json?session=<id prefix> is any
-session of the folder, and /sessions.json lists them for the page's session switcher. Python 3.8+, no dependencies,
-local only.
+session of the folder, and /sessions.json lists them for the page's session switcher. /sessions is the sessions table
+of the folder (sessions_template.html, fed by /stats.json), each row opening its session in the trace page.
+Python 3.8+, no dependencies, local only.
 """
 import argparse
 import datetime
@@ -36,8 +37,10 @@ class Tracer:
     def __init__(self, args):
         self.args = args
         self.lock = threading.Lock()
+        self.docs = {}  # path -> ((path, mtime, size), trace document)
         self.traces = {}  # path -> ((path, mtime, size), payload, etag)
         self.summaries = {}  # path -> ((mtime, size), summary) for /sessions.json
+        self.stats = {}  # path -> ((path, mtime, size), row) for /stats.json
 
     def pick(self, session=None):
         """The transcript to serve: the given session (id prefix), else the one pinned with --session, else the latest."""
@@ -53,19 +56,42 @@ class Tracer:
             what = f"session {session or self.args.session}*" if (session or self.args.session) else "a session"
             doc = {"error": f"no transcript of {what} started in {self.args.cwd} yet; start claude there, or pass --cwd"}
             return json.dumps(doc).encode("utf-8"), '"none"'
-        st = os.stat(path)
-        key = (path, st.st_mtime_ns, st.st_size)
         with self.lock:
+            key, doc = self.doc(path)
             entry = self.traces.get(path)
             if entry is None or entry[0] != key:
-                sid = os.path.basename(path)[:8]
-                title = self.args.title or f"{os.path.basename(self.args.cwd.rstrip('/'))} \u00B7 session {sid}"
-                doc = turn_trace.trace_for(path, root=self.args.root, source_root=self.args.source_root, title=title)
-                doc["live"] = {"transcript": path, "updated": datetime.datetime.now().isoformat(timespec="seconds")}
                 etag = '"' + hashlib.md5(repr(key).encode()).hexdigest()[:16] + '"'
-                print(f"{time.strftime('%H:%M:%S')}  {sid}  {len(doc['turns'])} turns, {len(doc['files'])} files", flush=True)
                 entry = self.traces[path] = (key, json.dumps(doc).encode("utf-8"), etag)
             return entry[1], entry[2]
+
+    def doc(self, path):
+        """The trace document of a transcript, re-extracted when the file changed (call with the lock held)."""
+        st = os.stat(path)
+        key = (path, st.st_mtime_ns, st.st_size)
+        entry = self.docs.get(path)
+        if entry is None or entry[0] != key:
+            sid = os.path.basename(path)[:8]
+            title = self.args.title or f"{os.path.basename(self.args.cwd.rstrip('/'))} \u00B7 session {sid}"
+            doc = turn_trace.trace_for(path, root=self.args.root, source_root=self.args.source_root, title=title)
+            doc["live"] = {"transcript": path, "updated": datetime.datetime.now().isoformat(timespec="seconds")}
+            print(f"{time.strftime('%H:%M:%S')}  {sid}  {len(doc['turns'])} turns, {len(doc['files'])} files", flush=True)
+            entry = self.docs[path] = (key, doc)
+        return entry
+
+    def rows(self):
+        """The sessions table of the folder (/stats.json): one row of totals per transcript, newest first, each
+        recomputed only when its file changed; a row links to the live trace page of its session."""
+        out = []
+        with self.lock:
+            for f in reversed(turn_trace.transcripts_for(self.args.cwd)):
+                key, doc = self.doc(f)
+                entry = self.stats.get(f)
+                if entry is None or entry[0] != key:
+                    row = turn_trace.session_stats(doc, f)
+                    row["page"] = "./?session=" + row["id"]
+                    entry = self.stats[f] = (key, row)
+                out.append(entry[1])
+        return json.dumps({"updated": datetime.datetime.now().isoformat(timespec="seconds"), "sessions": out}).encode("utf-8")
 
     def sessions(self):
         """The folder's sessions, newest first, each summarized once per change of its file."""
@@ -84,10 +110,15 @@ class Tracer:
 
 
 def page(args):
-    template = open(os.path.join(HERE, "template.html"), encoding="utf-8").read()
     live = {"interval": args.interval, "cwd": args.cwd, "session": args.session}
-    return template.replace("${examples}", "[]").replace("${live}", json.dumps(live).replace("</", "<\\/")) \
-        .replace("${generated}", datetime.date.today().isoformat()).encode("utf-8")
+    nav = '<p class="nav"><a href="sessions">\u2190 all sessions of this folder</a></p>'
+    return turn_trace.fill_template("template.html", live=live, nav=nav, note="Live from the transcripts in ~/.claude/projects.").encode("utf-8")
+
+
+def sessions_page(args):
+    live = {"interval": 30, "cwd": args.cwd}
+    return turn_trace.fill_template("sessions_template.html", live=live,
+                                    note="Live from the transcripts in ~/.claude/projects; a row opens the session in the live trace page.").encode("utf-8")
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -109,6 +140,10 @@ class Handler(BaseHTTPRequestHandler):
         path, query = url.path, parse_qs(url.query)
         if path in ("/", "/index.html"):
             self.send(200, "text/html; charset=utf-8", page(self.args))
+        elif path in ("/sessions", "/sessions.html"):
+            self.send(200, "text/html; charset=utf-8", sessions_page(self.args))
+        elif path == "/stats.json":
+            self.send(200, "application/json; charset=utf-8", self.tracer.rows())
         elif path == "/sessions.json":
             self.send(200, "application/json; charset=utf-8", self.tracer.sessions())
         elif path == "/trace.json":
