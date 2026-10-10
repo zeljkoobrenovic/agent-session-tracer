@@ -1,0 +1,43 @@
+codex_trace.py
+  s_0af420b20b4753::t_528b15b53ba913 1-327
+README.md
+  s_0af420b20b4753::t_50052ef6d1d311 3-4,56-57,59,71-90
+build_sessions.py
+  s_0af420b20b4753::t_73bfdf496cdafc 62-63,77,82,87
+docs/index.html
+  s_0af420b20b4753::t_d2833897b89c03 202,226,315,411,461
+docs/sessions/haiku-t01-long-files.html
+  s_0af420b20b4753::t_e8a0927d4a2dd0 202,226,315,411,461
+docs/sessions/haiku-t01-split-files.html
+  s_0af420b20b4753::t_3469435bb97e2d 202,226,315,411,461
+docs/sessions/index.html
+  s_0af420b20b4753::t_bc7fe339799802 6,8,110-111,120,132,140,148,175,206,208,212,215,218,245,247,253,261,308
+docs/sessions/sonnet-t01-long-files.html
+  s_0af420b20b4753::t_d9f3b8a0111dc1 202,226,315,411,461
+docs/sessions/sonnet-t01-split-files.html
+  s_0af420b20b4753::t_51f502692bb60f 202,226,315,411,461
+serve.py
+  s_0af420b20b4753::t_f9a68aeb9ba982 50,73
+sessions_template.html
+  s_0af420b20b4753::t_6c9f3bd0c601a2 6,8,110-111,120,132,148,175,206,208,212,215,218,245,247,253,261,308
+template.html
+  s_0af420b20b4753::t_070eb66e1f1685 202,226,411,461
+turn_trace.py
+  s_0af420b20b4753::t_0a2a29153c43df 28-29,82-87,96-97,120,125-144,148,150,157-159,171,174-194,196,202,261-262,469-471,494-511,516-519,577-578,580,595,614-615,617,632-634,636-642,644,681,691-692
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b7790fc49dfbfa92ad68a013be477aabc4c0a7e3",
+  "prompts": {},
+  "sessions": {
+    "s_0af420b20b4753": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f8fc5201-db12-4f99-a873-2c992f5fc97e",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Zeljko Obrenovic <zeljkoobrenovic@yahoo.com>"
+    }
+  }
+}
