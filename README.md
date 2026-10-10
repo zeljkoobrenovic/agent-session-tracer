@@ -110,7 +110,14 @@ cache writes is not modelled.
   mark are the agent's answer to it. Hover the mark for the message. A table under the grid lists every prompt with
   the tokens its turns caused, as a share of the session, with their time and cost.
 - **Files.** Sortable (first seen, lines read, edits, hits, size, name) and filterable by path. One row per file: lines read (blue), edits (orange), search output lines naming it (dot or count), its
-  total line count, and the first turn it appeared. Files seen only in search results are hidden by default.
+  length, and the first turn it appeared. Files seen only in search results are hidden by default. A file's length is
+  the one the session saw (a `Read` reports the file's total lines, a `Write` its content), else the file counted on
+  disk when the trace is made.
+- **Files map.** Under the grid, every file of the session as a circle whose area is its length, with the share of
+  its lines the agent read as a blue area inside and the share it edited as an orange one, so a small change to a long
+  file is a dot in a large circle and a rewrite fills it. Files of unknown length are dashed and sized by the lines
+  touched. Packed with a small routine in the page (no library), the file rows' filter applies, hover gives the
+  numbers, a click jumps to the file's row.
 
 Hover a cell for details, click a turn to list its commands. All three token rows share one scale.
 
@@ -137,7 +144,8 @@ reads.
               "new": {"prev_output": 147, "tool_results": 1489, "setup": 0, "other": 0},
               "tools": [ {"tool": "Bash", "kind": "search|read|edit|build|vcs|shell|text", "detail": "the command or path",
                           "lines": 30, "files": [ {"path": "a/b.java", "kind": "read|edit|hit", "lines": 30} ] } ] } ],
-  "files": [ {"path": "a/b.java", "lines": 1234, "first": 3, "read": 110, "edits": 2, "hits": 4} ]
+  "files": [ {"path": "a/b.java", "lines": 1234, "first": 3, "read": 110, "edits": 2, "edit_lines": 9, "hits": 4} ]
+                                   # lines: the file's length as the session saw it, else counted on disk when extracted
 }
 ```
 
