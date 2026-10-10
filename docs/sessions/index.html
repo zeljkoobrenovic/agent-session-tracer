@@ -96,6 +96,36 @@ details.help summary { cursor: pointer; color: var(--text); font-weight: 500; }
 details.help summary:hover { text-decoration: underline; }
 details.help p { margin: 10px 0; line-height: 1.6; }
 details.help code, .filters code { font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin: 0 0 12px; }
+.tabs button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; padding: 6px 12px; margin-bottom: -1px; color: var(--muted); font-weight: 500; }
+.tabs button:hover { background: var(--surface-2); color: var(--text); }
+.tabs button[aria-selected=true] { color: var(--text); border-bottom-color: var(--sel-strong); }
+.tabs .hint { font-weight: 400; }
+.fmap { margin: 0 0 8px; }
+.fmap p.hint { margin: 0 0 8px; max-width: 980px; }
+.fmap .sw::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin: 0 4px 0 2px; vertical-align: -1px; background: var(--c); }
+.map-wrap { overflow: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 8px; }
+#map { display: block; max-width: 100%; height: auto; margin: 0 auto; cursor: zoom-out; }
+#map circle.dir { fill: var(--faint); fill-opacity: .07; stroke: var(--border); stroke-width: 1; cursor: zoom-in; }
+#map g.d:hover > circle.dir { stroke: var(--muted); }
+#map g.d.focus > circle.dir { cursor: zoom-out; }
+#map circle.file { fill: var(--surface); stroke: var(--border); stroke-width: 1; cursor: pointer; }
+#map circle.file.unknown { stroke-dasharray: 3 2; }
+#map circle.file.on { stroke: var(--sel-strong); stroke-width: 2.5; }
+#map circle.read { fill: var(--read); opacity: .35; pointer-events: none; }
+#map circle.edit { fill: var(--write); opacity: .9; pointer-events: none; }
+#map g.f:hover circle.file { stroke: var(--text); stroke-width: 1.5; }
+#map text { fill: var(--text); pointer-events: none; text-anchor: middle; dominant-baseline: central; }
+#map text.dl { fill: var(--muted); font-weight: 600; }
+.crumb { font-size: 13px; color: var(--muted); margin: 0 0 8px; }
+.crumb a { text-decoration: none; }
+.crumb a:hover { text-decoration: underline; }
+.crumb b { color: var(--text); font-weight: 600; }
+.crumb .sep { margin: 0 6px; color: var(--faint); }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 4px 2px 10px; border-radius: 12px; background: var(--sel); color: var(--text); font-size: 13px; max-width: 420px; }
+.chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip button { border: 0; background: none; padding: 0 6px; font-size: 14px; line-height: 1; color: var(--muted); }
+.tip { position: fixed; z-index: 10; pointer-events: none; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 12px; max-width: 520px; box-shadow: 0 4px 16px rgba(0,0,0,.15); white-space: pre-wrap; word-break: break-word; display: none; }
 .empty { padding: 24px; color: var(--faint); text-align: center; }
 footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--border); }
 @media (max-width: 700px) {
@@ -130,24 +160,38 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
   <label id="agentWrap" hidden>agent <select id="agent"><option value="">all</option></select></label>
   <label id="modelWrap" hidden>model <select id="model"><option value="">all</option></select></label>
   <label title="Sessions with fewer than this many API calls, such as one-line questions and aborted starts"><input type="checkbox" id="hideShort"> hide sessions under <input type="number" id="minTurns" value="5" min="1" max="999" style="width:58px"> turns</label>
+  <span class="chip" id="fileChip" hidden title=""><span id="fileName"></span><button type="button" id="fileClear" title="List every session again">×</button></span>
   <span class="hint" id="count"></span>
   <span class="spacer"></span>
   <span class="live" id="live" hidden><span class="pulse"></span><span id="liveStatus">loading…</span></span>
 </div>
-<div class="twrap"><table class="sessions" id="table" aria-label="Sessions"></table></div>
-<section id="byFolder" hidden></section>
-
-<details class="help">
-  <summary>How to read this table</summary>
-  <p>One row per session, that is one transcript of Claude Code (interactive sessions and <code>claude -p</code> runs alike) or of Codex (its rollout files under <code>~/.codex/sessions</code>). Click a column heading to sort, type in the search box to filter (prompt, folder, model and session id are searched), pick a folder or a model; the tiles sum what is listed. A row opens the session in the trace page, turn by turn.</p>
-  <p><b>Prompts</b> are the messages you typed; <b>turns</b> the API calls they took. <b>Re-sent</b> is the context read from the prompt cache over all turns, the whole conversation re-sent with each call, which is where most of a session's tokens go. <b>New</b> is what the calls added to it (tool results, the agent's own words, the setup and the reminders) plus the few tokens sent uncached; <b>output</b> what the model wrote. <b>Files</b> counts the files read and edited, <b>lines read</b> the lines of those files that tool output returned, <b>edits</b> the edit calls.</p>
-  <p><b>Cost</b> is the recorded cost when the trace has one, otherwise an estimate at list prices (2026-10-09: cache reads, 1-hour cache writes, uncached input, output), shown in grey. The bar is the share of the most expensive listed session. <b>Active</b> time is the model's time plus its tools' time, without the waits between your prompts; <b>span</b> runs from the first API call to the last.</p>
-  <p>Built from the transcripts the agents keep (Claude Code under <code>~/.claude/projects</code>, deleted after 30 days by default; Codex under <code>~/.codex/sessions</code>) with <code>build_sessions.py</code> from the <a href="https://github.com/zeljkoobrenovic/agent-session-tracer">agent-session-tracer</a> repository; <code>serve.py</code> serves the same table live.</p>
-</details>
+<div class="tabs" id="tabs" role="tablist">
+  <button type="button" role="tab" data-tab="sessions" aria-selected="true">Sessions <span class="hint" id="sessionsHint"></span></button>
+  <button type="button" role="tab" data-tab="folders" aria-selected="false" hidden>By folder <span class="hint" id="foldersHint"></span></button>
+  <button type="button" role="tab" data-tab="map" aria-selected="false" hidden>Files map <span class="hint" id="mapHint"></span></button>
+</div>
+<section id="sessionsTab" role="tabpanel">
+  <div class="twrap"><table class="sessions" id="table" aria-label="Sessions"></table></div>
+  <details class="help">
+    <summary>How to read this table</summary>
+    <p>One row per session, that is one transcript of Claude Code (interactive sessions and <code>claude -p</code> runs alike) or of Codex (its rollout files under <code>~/.codex/sessions</code>). Click a column heading to sort, type in the search box to filter (prompt, folder, model and session id are searched), pick a folder or a model; the tiles sum what is listed. A row opens the session in the trace page, turn by turn.</p>
+    <p><b>Prompts</b> are the messages you typed; <b>turns</b> the API calls they took. <b>Re-sent</b> is the context read from the prompt cache over all turns, the whole conversation re-sent with each call, which is where most of a session's tokens go. <b>New</b> is what the calls added to it (tool results, the agent's own words, the setup and the reminders) plus the few tokens sent uncached; <b>output</b> what the model wrote. <b>Files</b> counts the files read and edited, <b>lines read</b> the lines of those files that tool output returned, <b>edits</b> the edit calls.</p>
+    <p><b>Tabs.</b> The sessions table; with several folders, a table per folder (a row lists only that folder's sessions); and the files map.</p>
+    <p><b>Cost</b> is the recorded cost when the trace has one, otherwise an estimate at list prices (2026-10-09: cache reads, 1-hour cache writes, uncached input, output), shown in grey. The bar is the share of the most expensive listed session. <b>Active</b> time is the model's time plus its tools' time, without the waits between your prompts; <b>span</b> runs from the first API call to the last.</p>
+    <p>Built from the transcripts the agents keep (Claude Code under <code>~/.claude/projects</code>, deleted after 30 days by default; Codex under <code>~/.codex/sessions</code>) with <code>build_sessions.py</code> from the <a href="https://github.com/zeljkoobrenovic/agent-session-tracer">agent-session-tracer</a> repository; <code>serve.py</code> serves the same table live.</p>
+  </details>
+</section>
+<section id="byFolder" role="tabpanel" hidden></section>
+<section class="fmap" id="mapSec" role="tabpanel" hidden>
+  <p class="hint">The files the listed sessions read or edited, as circles nested in their folders<span id="mapFolders"> (one top circle per folder)</span>. A file's area is its length as the sessions saw it (dashed: length unknown, sized by the lines touched); inside, <span class="sw" style="--c: var(--read)"></span>the share of its lines read and <span class="sw" style="--c: var(--write)"></span>the share edited, over all sessions. Click a folder to zoom in, the background to zoom out, a file to list only the sessions that touched it; hover for the numbers. The filters above apply.</p>
+  <div class="crumb" id="mapCrumb"></div>
+  <div class="map-wrap"><svg id="map" role="img" aria-label="Files of the listed sessions as circles, nested in their folders"></svg></div>
+</section>
+<div class="tip" id="tip"></div>
 
 <footer>Generated 2026-10-10. 4 sessions of the embedded examples, built from the transcripts the agents keep under ~/.claude/projects and ~/.codex/sessions. Source and extractor at <a href="https://github.com/zeljkoobrenovic/agent-session-tracer">agent-session-tracer</a>. No external resources.</footer>
 </main>
-<script id="data" type="application/json">{"title": "the embedded examples", "sessions": [{"id": "haiku-t01-long-files", "title": "Haiku 5.5 \u00b7 fix in long files (variant A)", "cwd": "/Users/zeljkoobrenovic/IdeaProjects/sokrates-size-experiment/work/t01-undefined-team-active-a-r07-20261009-155034/repo", "folder": "repo", "agent": "claude", "model": "claude-haiku-5-5", "started": "2026-10-09T13:50:56.338Z", "ended": "2026-10-09T13:51:27.145Z", "span_s": 30.8, "turns": 13, "prompts": 1, "first_prompt": "You are working in a Java 17 / Maven multi-module repository (Sokrates, a source-code analysis tool that generates HTML reports). Make the change described below.", "tool_calls": 12, "files_read": 3, "files_edited": 1, "lines_read": 266, "edits": 1, "cache_read": 306547, "cache_write": 19638, "input": 26, "output": 3834, "cost_usd": 0.008912670000000001, "cost_estimate_usd": 0.008913, "model_s": 20.2, "tools_s": 13.0, "duration_s": 33.3, "page": "haiku-t01-long-files.html"}, {"id": "haiku-t01-split-files", "title": "Haiku 5.5 \u00b7 the same fix in split files (variant B)", "cwd": "/Users/zeljkoobrenovic/IdeaProjects/sokrates-size-experiment/work/t01-undefined-team-active-b-r07-20261009-154840/repo", "folder": "repo", "agent": "claude", "model": "claude-haiku-5-5", "started": "2026-10-09T13:48:56.054Z", "ended": "2026-10-09T13:49:17.661Z", "span_s": 21.6, "turns": 10, "prompts": 1, "first_prompt": "You are working in a Java 17 / Maven multi-module repository (Sokrates, a source-code analysis tool that generates HTML reports). Make the change described below.", "tool_calls": 11, "files_read": 2, "files_edited": 1, "lines_read": 508, "edits": 1, "cache_read": 251153, "cache_write": 22543, "input": 20, "output": 3573, "cost_usd": 0.008808630000000001, "cost_estimate_usd": 0.008809, "model_s": 17.4, "tools_s": 6.2, "duration_s": 23.6, "page": "haiku-t01-split-files.html"}, {"id": "sonnet-t01-long-files", "title": "Sonnet 5.5 \u00b7 fix in long files (experiment task t01, variant A)", "cwd": "/Users/zeljkoobrenovic/IdeaProjects/sokrates-size-experiment/work/t01-undefined-team-active-a-r06-20261009-130934/repo", "folder": "repo", "agent": "claude", "model": "claude-sonnet-5-5", "started": "2026-10-09T11:09:51.146Z", "ended": "2026-10-09T11:10:22.613Z", "span_s": 31.5, "turns": 10, "prompts": 1, "first_prompt": "You are working in a Java 17 / Maven multi-module repository (Sokrates, a source-code analysis tool that generates HTML reports). Make the change described below.", "tool_calls": 10, "files_read": 3, "files_edited": 1, "lines_read": 106, "edits": 1, "cache_read": 199948, "cache_write": 14205, "input": 20, "output": 1934, "cost_usd": 0.1161896, "cost_estimate_usd": 0.096195, "model_s": 27.8, "tools_s": 5.7, "duration_s": 33.5, "page": "sonnet-t01-long-files.html"}, {"id": "sonnet-t01-split-files", "title": "Sonnet 5.5 \u00b7 the same fix in split files (variant B)", "cwd": "/Users/zeljkoobrenovic/IdeaProjects/sokrates-size-experiment/work/t01-undefined-team-active-b-r05-20261009-125844/repo", "folder": "repo", "agent": "claude", "model": "claude-sonnet-5-5", "started": "2026-10-09T10:59:04.606Z", "ended": "2026-10-09T10:59:29.129Z", "span_s": 24.5, "turns": 10, "prompts": 1, "first_prompt": "You are working in a Java 17 / Maven multi-module repository (Sokrates, a source-code analysis tool that generates HTML reports). Make the change described below.", "tool_calls": 10, "files_read": 0, "files_edited": 1, "lines_read": 0, "edits": 1, "cache_read": 195378, "cache_write": 13157, "input": 20, "output": 1581, "cost_usd": 0.10755359999999999, "cost_estimate_usd": 0.088016, "model_s": 21.4, "tools_s": 5.1, "duration_s": 26.5, "page": "sonnet-t01-split-files.html"}]}</script>
+<script id="data" type="application/json">{"title": "the embedded examples", "sessions": [{"id": "haiku-t01-long-files", "title": "Haiku 5.5 \u00b7 fix in long files (variant A)", "cwd": "/Users/zeljkoobrenovic/IdeaProjects/sokrates-size-experiment/work/t01-undefined-team-active-a-r07-20261009-155034/repo", "folder": "repo", "agent": "claude", "model": "claude-haiku-5-5", "started": "2026-10-09T13:50:56.338Z", "ended": "2026-10-09T13:51:27.145Z", "span_s": 30.8, "turns": 13, "prompts": 1, "first_prompt": "You are working in a Java 17 / Maven multi-module repository (Sokrates, a source-code analysis tool that generates HTML reports). Make the change described below.", "tool_calls": 12, "files_read": 3, "files_edited": 1, "lines_read": 266, "edits": 1, "cache_read": 306547, "cache_write": 19638, "input": 26, "output": 3834, "cost_usd": 0.008912670000000001, "cost_estimate_usd": 0.008913, "model_s": 20.2, "tools_s": 13.0, "duration_s": 33.3, "file_map": [["codeanalyzer/src/main/java/nl/obren/sokrates/sourcecode/landscape/TeamsConfig.java", 32, 77, 0, 0], ["codeanalyzer/src/main/java/nl/obren/sokrates/sourcecode/landscape/analysis/LandscapeAnalysisResults.java", 1405, 61, 1, 0], ["codeanalyzer/src/main/java/nl/obren/sokrates/sourcecode/landscape/analysis/ContributorRepositories.java", 85, 128, 0, 0]], "page": "haiku-t01-long-files.html"}, {"id": "haiku-t01-split-files", "title": "Haiku 5.5 \u00b7 the same fix in split files (variant B)", "cwd": "/Users/zeljkoobrenovic/IdeaProjects/sokrates-size-experiment/work/t01-undefined-team-active-b-r07-20261009-154840/repo", "folder": "repo", "agent": "claude", "model": "claude-haiku-5-5", "started": "2026-10-09T13:48:56.054Z", "ended": "2026-10-09T13:49:17.661Z", "span_s": 21.6, "turns": 10, "prompts": 1, "first_prompt": "You are working in a Java 17 / Maven multi-module repository (Sokrates, a source-code analysis tool that generates HTML reports). Make the change described below.", "tool_calls": 11, "files_read": 2, "files_edited": 1, "lines_read": 508, "edits": 1, "cache_read": 251153, "cache_write": 22543, "input": 20, "output": 3573, "cost_usd": 0.008808630000000001, "cost_estimate_usd": 0.008809, "model_s": 17.4, "tools_s": 6.2, "duration_s": 23.6, "file_map": [["codeanalyzer/src/main/java/nl/obren/sokrates/sourcecode/contributors/Contributor.java", 222, 223, 0, 0], ["codeanalyzer/src/main/java/nl/obren/sokrates/sourcecode/landscape/analysis/LandscapeContributorsAggregator.java", 284, 285, 1, 0]], "page": "haiku-t01-split-files.html"}, {"id": "sonnet-t01-long-files", "title": "Sonnet 5.5 \u00b7 fix in long files (experiment task t01, variant A)", "cwd": "/Users/zeljkoobrenovic/IdeaProjects/sokrates-size-experiment/work/t01-undefined-team-active-a-r06-20261009-130934/repo", "folder": "repo", "agent": "claude", "model": "claude-sonnet-5-5", "started": "2026-10-09T11:09:51.146Z", "ended": "2026-10-09T11:10:22.613Z", "span_s": 31.5, "turns": 10, "prompts": 1, "first_prompt": "You are working in a Java 17 / Maven multi-module repository (Sokrates, a source-code analysis tool that generates HTML reports). Make the change described below.", "tool_calls": 10, "files_read": 3, "files_edited": 1, "lines_read": 106, "edits": 1, "cache_read": 199948, "cache_write": 14205, "input": 20, "output": 1934, "cost_usd": 0.1161896, "cost_estimate_usd": 0.096195, "model_s": 27.8, "tools_s": 5.7, "duration_s": 33.5, "file_map": [["codeanalyzer/src/main/java/nl/obren/sokrates/sourcecode/landscape/analysis/LandscapeAnalysisResults.java", 1405, 50, 1, 0], ["codeanalyzer/src/main/java/nl/obren/sokrates/sourcecode/contributors/Contributor.java", 222, 20, 0, 0], ["codeanalyzer/src/main/java/nl/obren/sokrates/sourcecode/filehistory/DateUtils.java", 240, 36, 0, 0]], "page": "sonnet-t01-long-files.html"}, {"id": "sonnet-t01-split-files", "title": "Sonnet 5.5 \u00b7 the same fix in split files (variant B)", "cwd": "/Users/zeljkoobrenovic/IdeaProjects/sokrates-size-experiment/work/t01-undefined-team-active-b-r05-20261009-125844/repo", "folder": "repo", "agent": "claude", "model": "claude-sonnet-5-5", "started": "2026-10-09T10:59:04.606Z", "ended": "2026-10-09T10:59:29.129Z", "span_s": 24.5, "turns": 10, "prompts": 1, "first_prompt": "You are working in a Java 17 / Maven multi-module repository (Sokrates, a source-code analysis tool that generates HTML reports). Make the change described below.", "tool_calls": 10, "files_read": 0, "files_edited": 1, "lines_read": 0, "edits": 1, "cache_read": 195378, "cache_write": 13157, "input": 20, "output": 1581, "cost_usd": 0.10755359999999999, "cost_estimate_usd": 0.088016, "model_s": 21.4, "tools_s": 5.1, "duration_s": 26.5, "file_map": [["codeanalyzer/src/main/java/nl/obren/sokrates/sourcecode/landscape/analysis/LandscapeContributorsAggregator.java", 284, 0, 1, 0]], "page": "sonnet-t01-split-files.html"}]}</script>
 <script id="liveConfig" type="application/json">null</script>
 <script>
 (function () {
@@ -156,7 +200,17 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
   var LIVE = null; try { LIVE = JSON.parse($('liveConfig').textContent); } catch (e) {}
   var rows = (DATA && DATA.sessions) || [], TITLE = (DATA && DATA.title) || '';
   var table = $('table'), tiles = $('tiles'), q = $('q'), folderSel = $('folder'), modelSel = $('model'), agentSel = $('agent'), hideShort = $('hideShort'), minTurns = $('minTurns'), count = $('count');
-  var sortKey = 'started', sortDir = -1;
+  var sortKey = 'started', sortDir = -1, fileKey = '';
+  var TABS = {sessions: 'sessionsTab', folders: 'byFolder', map: 'mapSec'}, tab = 'sessions';
+  try { tab = localStorage.getItem('sessions-tab') || 'sessions'; } catch (e) {}
+  if (!TABS[tab]) tab = 'sessions';
+  function tabBtn(t) { return $('tabs').querySelector('button[data-tab="' + t + '"]'); }
+  function showTab(t) {  // one view at a time: the sessions table (default), the table per folder or the files map
+    tab = t;
+    Object.keys(TABS).forEach(function (k) { tabBtn(k).setAttribute('aria-selected', k === t ? 'true' : 'false'); $(TABS[k]).hidden = k !== t; });
+    try { localStorage.setItem('sessions-tab', t); } catch (e) {}
+    if (t === 'map' && mapDirty) renderMap();  // sized by its visible width
+  }
 
   var THEMES = ['light', 'dark', 'auto'], ICON = {light: '☀', dark: '☾', auto: '◐'}, NAME = {light: 'light', dark: 'dark', auto: 'auto (follows the system)'};
   var theme = 'light'; try { theme = localStorage.getItem('trace-theme') || 'light'; } catch (e) {}
@@ -231,13 +285,18 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
     if (TITLE) document.title = 'Agent Sessions · ' + TITLE;
   }
 
-  function filtered() {
-    var text = q.value.trim().toLowerCase(), f = folderSel.value, m = modelSel.value, ag = agentSel.value, min = hideShort.checked ? Math.max(1, +minTurns.value || 1) : 0;
+  function multiFolder() { return counts('folder').length > 1; }
+  // a file's map key: its path, under the session's folder when the table lists several folders (absolute paths as they are)
+  function fileKeyOf(r, path, multi) { return multi && path.charAt(0) !== '/' ? (r.folder || '?') + '/' + path : path; }
+  function touches(r, key, multi) { return (r.file_map || []).some(function (x) { return fileKeyOf(r, x[0], multi) === key; }); }
+  function filtered(anyFile) {
+    var multi = multiFolder(), text = q.value.trim().toLowerCase(), f = folderSel.value, m = modelSel.value, ag = agentSel.value, min = hideShort.checked ? Math.max(1, +minTurns.value || 1) : 0;
     return rows.filter(function (r) {
       if (f && r.folder !== f) return false;
       if (ag && (r.agent || 'claude') !== ag) return false;
       if (m && r.model !== m) return false;
       if (min && (r.turns || 0) < min) return false;
+      if (fileKey && !anyFile && !touches(r, fileKey, multi)) return false;
       if (text) { var hay = [r.first_prompt, r.folder, r.cwd, r.model, r.id, r.title, r.agent].join(' ').toLowerCase(); if (hay.indexOf(text) < 0) return false; }
       return true;
     });
@@ -263,7 +322,9 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
       (known ? tile('cost', fmtUsd(total), recorded === known ? 'as recorded' : recorded ? recorded + ' recorded, ' + (known - recorded) + ' estimated' : 'estimated at list prices' + (known < list.length ? ' · ' + (list.length - known) + ' unknown' : '')) : '') +
       (active ? tile('active time', fmtS(active), 'model and tools, waits left out') : '') +
       tile('files edited', abbrT(sum(list, function (r) { return r.files_edited; })), abbrT(sum(list, function (r) { return r.edits; })) + ' edits · ' + abbrT(sum(list, function (r) { return r.lines_read; })) + ' lines read');
-    count.textContent = list.length === rows.length ? '' : list.length + ' of ' + rows.length + ' sessions';
+    count.textContent = list.length === rows.length ? '' : list.length + ' of ' + rows.length + ' sessions' + (fileKey ? ' touched the file' : '');
+    $('sessionsHint').textContent = '· ' + list.length;
+    $('fileChip').hidden = !fileKey; $('fileName').textContent = fileKey; $('fileChip').title = fileKey;
     var ctx = {maxCost: Math.max.apply(null, costs.concat([0]))};
     var showFolder = counts('folder').length > 1;
     var h = '<thead><tr>' + COLS.map(function (c) {
@@ -296,11 +357,13 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
     }
     table.innerHTML = h;
     renderFolders(list, showFolder);
+    scheduleMap();
   }
 
   function renderFolders(list, show) {
     var sec = $('byFolder');
-    if (!show) { sec.hidden = true; sec.innerHTML = ''; return; }
+    tabBtn('folders').hidden = !show; $('foldersHint').textContent = '';
+    if (!show) { sec.innerHTML = ''; if (tab === 'folders') showTab('sessions'); return; }
     var by = {};
     list.forEach(function (r) {
       var f = by[r.folder] = by[r.folder] || {folder: r.folder, cwd: r.cwd, n: 0, turns: 0, prompts: 0, resent: 0, nw: 0, out: 0, cost: 0, costN: 0, active: 0, last: ''};
@@ -309,13 +372,222 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
       if ((r.started || '') > f.last) f.last = r.started || '';
     });
     var fs = Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return b.cost - a.cost || b.turns - a.turns; });
-    var h = '<h2>By folder</h2><div class="twrap"><table class="folders"><thead><tr><th>folder</th><th class="num">sessions</th><th class="num">prompts</th><th class="num">turns</th><th class="num">re-sent</th><th class="num">new</th><th class="num">output</th><th class="num">cost</th><th class="num">active</th><th>last session</th></tr></thead><tbody>';
+    $('foldersHint').textContent = '· ' + fs.length;
+    var h = '<div class="twrap"><table class="folders"><thead><tr><th>folder</th><th class="num">sessions</th><th class="num">prompts</th><th class="num">turns</th><th class="num">re-sent</th><th class="num">new</th><th class="num">output</th><th class="num">cost</th><th class="num">active</th><th>last session</th></tr></thead><tbody>';
     fs.forEach(function (f) {
       h += '<tr data-folder="' + esc(f.folder) + '" title="' + esc(f.cwd + '\nclick to list only this folder') + '"><td class="name">' + esc(f.folder) + '</td><td class="num">' + f.n + '</td><td class="num">' + fmt(f.prompts) + '</td><td class="num">' + fmt(f.turns) + '</td><td class="num">' + abbrT(f.resent) + '</td><td class="num">' + abbrT(f.nw) + '</td><td class="num">' + abbrT(f.out) + '</td><td class="num">' + (f.costN ? fmtUsd(f.cost) : '–') + '</td><td class="num">' + fmtS(f.active) + '</td><td>' + fmtWhen(f.last) + '</td></tr>';
     });
     sec.innerHTML = h + '</tbody></table></div>';
-    sec.hidden = false;
   }
+
+  // files map: the files the listed sessions read or edited as circles (area = lines) nested in their folders, the
+  // share read in blue and the share edited in orange inside each file, summed over the sessions (as on the trace page)
+  var mapSvg = $('map'), mapHint = $('mapHint'), mapCrumb = $('mapCrumb'), tip = $('tip');
+  var mapRoot = null, mapFocus = null, mapView = null, mapAnim = null, mapTimer = null, MAP_PX = 760, byId = {};
+  var mapDirty = true;
+  function scheduleMap() {  // typing in the search box: once it pauses; in another tab: when the map's is opened
+    tabBtn('map').hidden = !rows.some(function (r) { return r.file_map && r.file_map.length; });
+    if (tabBtn('map').hidden && tab === 'map') showTab('sessions');
+    mapDirty = true; clearTimeout(mapTimer);
+    if (tab === 'map') mapTimer = setTimeout(renderMap, 120);
+  }
+  function packCircles(items) {  // positions around (0, 0): a phyllotaxis start, then collisions pushed apart
+    var n = items.length, golden = Math.PI * (3 - Math.sqrt(5));
+    if (n === 1) { items[0].x = items[0].y = 0; return; }
+    var area = items.reduce(function (a, c) { return a + c.r * c.r * Math.PI; }, 0), R = Math.sqrt(area / Math.PI) * 1.15;
+    items.forEach(function (c, i) { var d = R * Math.sqrt((i + 0.5) / n), a = i * golden; c.x = d * Math.cos(a); c.y = d * Math.sin(a); });
+    for (var it = 0; it < (n > 600 ? 40 : 130); it++) {
+      for (var i = 0; i < n; i++) {
+        var a = items[i];
+        for (var j = i + 1; j < n; j++) {
+          var b = items[j], dx = b.x - a.x, dy = b.y - a.y, d2 = dx * dx + dy * dy, min = a.r + b.r + 1.5;
+          if (d2 >= min * min) continue;
+          var d = Math.sqrt(d2);
+          if (d < 0.01) { dx = Math.random() - 0.5; dy = Math.random() - 0.5; d = Math.sqrt(dx * dx + dy * dy); }
+          var push = (min - d) / d / 2;
+          a.x -= dx * push; a.y -= dy * push; b.x += dx * push; b.y += dy * push;
+        }
+      }
+      items.forEach(function (c) { c.x *= 0.975; c.y *= 0.975; });
+    }
+  }
+  function enclose(node) {  // the circle around the node's packed children: the centre walks toward the farthest child
+    var kids = node.kids, cx = 0, cy = 0, R = 0;
+    for (var it = 0; it < 80; it++) {
+      var far = null, fd = -1;
+      kids.forEach(function (k) { var d = Math.sqrt((k.x - cx) * (k.x - cx) + (k.y - cy) * (k.y - cy)) + k.r; if (d > fd) { fd = d; far = k; } });
+      R = fd;
+      var dx = far.x - cx, dy = far.y - cy, d0 = Math.sqrt(dx * dx + dy * dy) || 1, step = R * 0.08 * (1 - it / 80);
+      cx += dx / d0 * step; cy += dy / d0 * step;
+    }
+    kids.forEach(function (k) { k.x -= cx; k.y -= cy; });
+    node.r = R + Math.max(3, R * 0.04);
+  }
+  function buildTree(leaves) {
+    var root = {name: '', children: {}, files: [], folder: true};
+    leaves.forEach(function (c) {
+      var parts = c.f.path.split('/'), node = root;
+      for (var i = 0; i < parts.length - 1; i++) node = node.children[parts[i]] = node.children[parts[i]] || {name: parts[i], children: {}, files: [], folder: true};
+      c.name = parts[parts.length - 1];
+      node.files.push(c);
+    });
+    var id = 0;
+    function finish(node, depth, path) {
+      var kids = Object.keys(node.children).map(function (k) { return node.children[k]; });
+      while (kids.length === 1 && !node.files.length) {  // a chain of folders with nothing else in them collapses into one
+        var only = kids[0];
+        node.name = node.name ? node.name + '/' + only.name : only.name; node.files = only.files; node.children = only.children;
+        kids = Object.keys(node.children).map(function (k) { return node.children[k]; });
+      }
+      node.path = path ? path + '/' + node.name : node.name;
+      node.depth = depth; node.id = 'n' + (id++);
+      node.kids = kids.map(function (k) { return finish(k, depth + 1, node.path); }).concat(node.files);
+      node.kids.forEach(function (k) { if (!k.folder) { k.id = 'n' + (id++); k.depth = depth + 1; } k.parentId = node.id; });
+      node.count = node.kids.reduce(function (a, k) { return a + (k.folder ? k.count : 1); }, 0);
+      node.lines = node.kids.reduce(function (a, k) { return a + (k.folder ? k.lines : (k.known ? k.size : 0)); }, 0);
+      node.read = node.kids.reduce(function (a, k) { return a + (k.folder ? k.read : (k.f.read || 0)); }, 0);
+      node.edited = node.kids.reduce(function (a, k) { return a + (k.folder ? k.edited : (k.f.edits ? 1 : 0)); }, 0);
+      return node;
+    }
+    return finish(root, 0, '');
+  }
+  function layout(node) {
+    node.kids.forEach(function (k) { if (k.folder) layout(k); });
+    packCircles(node.kids);
+    enclose(node);
+  }
+  function absolute(node, ox, oy) {
+    node.ax = ox + (node.x || 0); node.ay = oy + (node.y || 0);
+    if (node.folder) node.kids.forEach(function (k) { absolute(k, node.ax, node.ay); });
+  }
+  function pct(part, whole) { return ' (' + Math.round(100 * Math.min(part, whole) / whole) + '%)'; }
+  function leafTip(c) {
+    var f = c.f, size = c.size;
+    return f.path + '\n' + (c.known ? fmt(f.lines) + ' lines' : 'length unknown') + (f.read ? ' · ' + fmt(f.read) + ' read' + (c.known ? pct(f.read, size) : '') : ' · not read') +
+      (f.edits ? ' · ' + f.edits + ' edit' + (f.edits > 1 ? 's' : '') + (f.edit_lines ? ', ' + fmt(f.edit_lines) + ' lines' + (c.known ? pct(f.edit_lines, size) : '') : '') : '') +
+      '\n' + f.sessions + ' session' + (f.sessions === 1 ? '' : 's') + (f.edited_in ? ', edited in ' + f.edited_in : '') + (f.last ? ' · last ' + fmtWhen(f.last) : '') + '\nclick to list only the sessions that touched it';
+  }
+  function folderTip(n) {
+    return (n.path || 'all files') + '\n' + n.count + ' file' + (n.count === 1 ? '' : 's') + (n.lines ? ' · ' + fmt(n.lines) + ' lines' : '') + (n.read ? ' · ' + fmt(n.read) + ' lines read' : '') + (n.edited ? ' · ' + n.edited + ' edited' : '') + '\nclick to zoom in';
+  }
+  function renderMap() {
+    var multi = multiFolder(), byPath = {};
+    mapDirty = false;
+    filtered(true).forEach(function (r) {  // the file filter left out: the map is where it is picked
+      (r.file_map || []).forEach(function (x) {
+        var key = fileKeyOf(r, x[0], multi), f = byPath[key] = byPath[key] || {path: key, lines: 0, read: 0, edits: 0, edit_lines: 0, sessions: 0, edited_in: 0, last: ''};
+        f.lines = Math.max(f.lines, x[1] || 0); f.read += x[2] || 0; f.edits += x[3] || 0; f.edit_lines += x[4] || 0;
+        f.sessions++; if (x[3]) f.edited_in++; if ((r.started || '') > f.last) f.last = r.started || '';
+      });
+    });
+    var files = Object.keys(byPath).map(function (k) { return byPath[k]; });
+    if (!files.length) { mapSvg.innerHTML = ''; mapCrumb.innerHTML = ''; mapRoot = mapFocus = null; mapHint.textContent = '· no files'; return; }
+    $('mapFolders').hidden = !multi;
+    var edited = files.filter(function (f) { return f.edits; }).length, total = files.length;
+    var leaves = files.map(function (f) {
+      var size = f.lines || 0, known = size > 0, touched = Math.max(f.read || 0, f.edit_lines || 0, 1);
+      return {f: f, size: known ? size : touched, known: known};
+    }).sort(function (a, b) { return b.size - a.size; }).slice(0, 1500);
+    var k = 60 / Math.sqrt(leaves[0].size);
+    leaves.forEach(function (c) { c.r = Math.max(4, Math.sqrt(c.size) * k); });
+    var keep = mapFocus && mapFocus.path;  // a refresh or a filter keeps the zoom when that folder is still there
+    mapRoot = buildTree(leaves);
+    layout(mapRoot);
+    absolute(mapRoot, 0, 0);
+    var h = '';
+    (function draw(node) {
+      if (node.folder) {
+        h += '<g class="d" data-id="' + node.id + '" data-tip="' + esc(folderTip(node)) + '"><circle class="dir" cx="' + node.ax.toFixed(1) + '" cy="' + node.ay.toFixed(1) + '" r="' + node.r.toFixed(1) + '" vector-effect="non-scaling-stroke"></circle>' +
+          (node.depth ? '<text class="dl" data-r="' + node.r.toFixed(1) + '" data-parent="' + node.parentId + '" x="' + node.ax.toFixed(1) + '" y="' + (node.ay - node.r).toFixed(1) + '">' + esc(node.name) + '</text>' : '') + '</g>';
+        node.kids.forEach(draw);
+        return;
+      }
+      var f = node.f, size = node.size, x = node.ax.toFixed(1), y = node.ay.toFixed(1);
+      var rRead = f.read && node.known ? node.r * Math.sqrt(Math.min(f.read, size) / size) : 0;
+      var rEdit = f.edits ? (f.edit_lines && node.known ? Math.max(2.5, node.r * Math.sqrt(Math.min(f.edit_lines, size) / size)) : 2.5) : 0;
+      h += '<g class="f" data-id="' + node.id + '" data-path="' + esc(f.path) + '" data-tip="' + esc(leafTip(node)) + '"><circle class="file' + (node.known ? '' : ' unknown') + (f.path === fileKey ? ' on' : '') + '" cx="' + x + '" cy="' + y + '" r="' + node.r.toFixed(1) + '" vector-effect="non-scaling-stroke"></circle>' +
+        (rRead ? '<circle class="read" cx="' + x + '" cy="' + y + '" r="' + rRead.toFixed(1) + '"></circle>' : '') +
+        (rEdit ? '<circle class="edit" cx="' + x + '" cy="' + y + '" r="' + rEdit.toFixed(1) + '"></circle>' : '') +
+        '<text class="fl" data-r="' + node.r.toFixed(1) + '" data-parent="' + node.parentId + '" x="' + x + '" y="' + y + '">' + esc(node.name) + '</text></g>';
+    })(mapRoot);
+    mapSvg.setAttribute('width', MAP_PX); mapSvg.setAttribute('height', MAP_PX);
+    mapSvg.innerHTML = h;
+    var folders = 0; (function count(n) { if (n.folder && n.depth) folders++; if (n.folder) n.kids.forEach(count); })(mapRoot);
+    mapHint.textContent = '· ' + total + ' file' + (total === 1 ? '' : 's') + (edited ? ', ' + edited + ' edited' : '') + (folders ? ', ' + folders + ' folder' + (folders === 1 ? '' : 's') : '') + (total > leaves.length ? ', the ' + leaves.length + ' largest shown' : '');
+    index();
+    var again = null; if (keep) for (var id in byId) if (byId[id].folder && byId[id].path === keep) again = byId[id];
+    mapView = null;
+    zoomTo(again || mapRoot, false);
+  }
+  function index() { byId = {}; (function walk(n, parent) { byId[n.id] = n; n.parent = parent; if (n.folder) n.kids.forEach(function (k) { walk(k, n); }); })(mapRoot, null); }
+  function viewOf(node) { var m = node.r * 1.04; return [node.ax - m, node.ay - m, 2 * m]; }
+  function applyView(v) {
+    mapView = v;
+    mapSvg.setAttribute('viewBox', v[0].toFixed(2) + ' ' + v[1].toFixed(2) + ' ' + v[2].toFixed(2) + ' ' + v[2].toFixed(2));
+  }
+  function labels() {  // text keeps its screen size; folders are named one level below the focus, files where they have room
+    var scale = (mapSvg.clientWidth || MAP_PX) / mapView[2], fs = 11 / scale, focusId = mapFocus ? mapFocus.id : null;
+    Array.prototype.forEach.call(mapSvg.querySelectorAll('text'), function (t) {
+      var r = +t.getAttribute('data-r') * scale, dir = t.classList.contains('dl'), show = dir ? (r >= 24 && t.getAttribute('data-parent') === focusId) : r >= 15;
+      t.style.display = show ? '' : 'none';
+      if (!show) return;
+      t.setAttribute('font-size', fs.toFixed(3));
+      var full = t.getAttribute('data-full') || t.textContent;
+      t.setAttribute('data-full', full);
+      var room = Math.floor(2 * r / 6.2);
+      t.textContent = full.length > room ? full.slice(0, Math.max(2, room - 1)) + '…' : full;
+      if (dir) t.setAttribute('dy', (fs * 1.2).toFixed(3));
+    });
+  }
+  function crumbs(node) {
+    var chain = []; for (var n = node; n; n = n.parent) chain.unshift(n);
+    mapCrumb.innerHTML = chain.map(function (n, i) { return (i ? '<span class="sep">›</span>' : '') + (n === node ? '<b>' + esc(n.name || 'all files') + '</b>' : '<a href="#" data-zoom="' + n.id + '">' + esc(n.name || 'all files') + '</a>'); }).join('') +
+      (node.parent ? ' <span class="hint">· click the background to zoom out</span>' : '');
+  }
+  function zoomTo(node, animate) {
+    if (!mapRoot) return;
+    mapFocus = node;
+    var target = viewOf(node), from = mapView;
+    Array.prototype.forEach.call(mapSvg.querySelectorAll('g.d'), function (g) { g.classList.toggle('focus', g.getAttribute('data-id') === node.id); });
+    crumbs(node);
+    if (mapAnim) clearTimeout(mapAnim);
+    if (!animate || !from) { applyView(target); labels(); return; }
+    var t0 = Date.now(), dur = 420;
+    (function step() {
+      var t = Math.min(1, (Date.now() - t0) / dur), e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      applyView([from[0] + (target[0] - from[0]) * e, from[1] + (target[1] - from[1]) * e, from[2] + (target[2] - from[2]) * e]);
+      if (t < 1) mapAnim = setTimeout(step, 16); else { mapAnim = null; labels(); }
+    })();
+  }
+  mapSvg.addEventListener('mousemove', function (e) {
+    var g = e.target.closest('[data-tip]');
+    if (!g) { tip.style.display = 'none'; return; }
+    tip.textContent = g.getAttribute('data-tip'); tip.style.display = 'block';
+    var x = e.clientX + 14, y = e.clientY + 14;
+    if (x + 540 > window.innerWidth) x = Math.max(8, e.clientX - 530);
+    if (y + tip.offsetHeight > window.innerHeight) y = Math.max(8, e.clientY - tip.offsetHeight - 8);
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  });
+  mapSvg.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  mapSvg.addEventListener('click', function (e) {
+    if (!mapRoot) return;
+    var g = e.target.closest('[data-id]'), node = g ? byId[g.getAttribute('data-id')] : null;
+    if (node && !node.folder) {  // a file: only the sessions that touched it (again: all of them)
+      fileKey = fileKey === node.f.path ? '' : node.f.path;
+      if (fileKey) showTab('sessions');
+      render();
+      return;
+    }
+    if (!node || node === mapFocus) { if (mapFocus.parent) zoomTo(mapFocus.parent, true); return; }  // the background or the focused folder: out
+    zoomTo(node, true);
+  });
+  mapCrumb.addEventListener('click', function (e) {
+    var a = e.target.closest('[data-zoom]');
+    if (a) { e.preventDefault(); var n = byId[a.getAttribute('data-zoom')]; if (n) zoomTo(n, true); }
+  });
+  window.addEventListener('resize', function () { if (mapRoot && mapView) labels(); });
+  $('tabs').addEventListener('click', function (e) { var b = e.target.closest('button[data-tab]'); if (b) showTab(b.getAttribute('data-tab')); });
+  $('fileClear').addEventListener('click', function () { fileKey = ''; render(); });
 
   table.addEventListener('click', function (e) {
     var th = e.target.closest('th[data-sort]');
@@ -326,7 +598,7 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
   });
   $('byFolder').addEventListener('click', function (e) {
     var tr = e.target.closest('tr[data-folder]');
-    if (tr) { folderSel.value = tr.getAttribute('data-folder'); if (folderSel.value !== tr.getAttribute('data-folder')) folderSel.value = ''; render(); window.scrollTo({top: 0, behavior: 'smooth'}); }
+    if (tr) { folderSel.value = tr.getAttribute('data-folder'); if (folderSel.value !== tr.getAttribute('data-folder')) folderSel.value = ''; showTab('sessions'); render(); }
   });
   [q, folderSel, modelSel, agentSel, hideShort, minTurns].forEach(function (el) { el.addEventListener(el === q || el === minTurns ? 'input' : 'change', render); });
   q.addEventListener('keydown', function (e) { if (e.key === 'Escape') { q.value = ''; render(); } });
@@ -354,6 +626,7 @@ footer { color: var(--faint); font-size: 13px; margin-top: 48px; padding-top: 16
 
   setup();
   render();
+  showTab(tabBtn(tab).hidden ? 'sessions' : tab);
   if (LIVE) startLive();
   else if (!rows.length) { var m = $('msg'); m.textContent = 'No sessions are embedded. Build this page with build_sessions.py.'; m.hidden = false; }
 })();

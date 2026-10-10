@@ -636,7 +636,10 @@ def session_stats(trace, transcript=None):
            "cache_read": sum(t.get("cache_read", 0) for t in turns), "cache_write": sum(t.get("cache_write", 0) for t in turns),
            "input": sum(t.get("input", 0) for t in turns), "output": sum(t.get("output", 0) for t in turns),
            "cost_usd": m.get("cost_usd"), "cost_estimate_usd": m.get("cost_estimate_usd"),
-           "model_s": m.get("model_s"), "tools_s": m.get("tools_s"), "duration_s": m.get("duration_s")}
+           "model_s": m.get("model_s"), "tools_s": m.get("tools_s"), "duration_s": m.get("duration_s"),
+           # the files read or edited, for the sessions page's files map: [path, lines, lines read, edits, lines edited]
+           "file_map": [[f["path"], f.get("lines") or 0, f.get("read") or 0, f.get("edits") or 0, f.get("edit_lines") or 0]
+                        for f in files if f.get("read") or f.get("edits")]}
     if transcript and os.path.isfile(transcript):
         row["transcript_bytes"] = os.path.getsize(transcript)
     return row

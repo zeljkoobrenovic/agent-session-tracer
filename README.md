@@ -56,8 +56,11 @@ python3 build_sessions.py --all --since 2026-10-01 --min-turns 5   # recent, non
 `build_sessions.py` writes a sessions page, `index.html`, with one row per session, Claude Code's and Codex's alike:
 when it started, the folder, the first prompt, the agent and model, prompts, turns, cost, active time, tool calls, files read and edited, lines read, edits, the
 tokens re-sent from the cache, new and output, and the session's span. Columns sort, the search box and the folder and
-agent and model selects filter, the tiles and the footer row sum what is listed, and with several folders a table per folder
-follows. Next to it, one trace page per session (`<session id>.html`, the page above with that session embedded and a
+agent and model selects filter, and the tiles and the footer row sum what is listed. The table shares a tab bar with a table per
+folder (when there are several) and a files map like the trace page's, of every file the listed sessions read or edited
+(with several folders, each under its folder's circle): a file's area is its length, the blue and orange areas inside
+the share of it read and edited over all those sessions. Click a folder to zoom in, a file to list only the sessions
+that touched it. The open tab is remembered in the browser. Next to it, one trace page per session (`<session id>.html`, the page above with that session embedded and a
 link back), which the rows open. Everything is self-contained; the transcripts are read in parallel (`--jobs`), about a
 second per 50 MB of transcript. `--trace a.json` adds a trace extracted earlier instead of a transcript. The live
 server has the same table at http://localhost:8765/sessions, refreshed every 30 s, whose rows open the session in the
@@ -160,7 +163,7 @@ reads.
 save an agent tokens? below the read budget it does not), Sonnet 5.5 and Haiku 5.5 on the same task against long and
 split files. `build_page.py` embeds them into `docs/index.html` from `template.html`; the page loads nothing from the network
 (its only companion file is the logo), light and dark, and `serve.py` serves the same template in live mode.
-`docs/sessions/` is the sessions table of the same examples (`build_sessions.py --trace examples/*.json --out docs/sessions`),
+`docs/sessions/` is the sessions table of the same examples (`build_sessions.py $(printf -- '--trace %s ' examples/*.json) --out docs/sessions`),
 from `sessions_template.html`.
 
 ## License
