@@ -46,7 +46,8 @@ TRACE_FORMAT = """
               "tools": [ {"tool": "Bash", "kind": "search|read|edit|build|vcs|shell|text", "detail": "the command or path",
                           "lines": 30,                      # lines of tool output the agent received
                           "files": [ {"path": "a/b.java", "kind": "read|edit|hit", "lines": 30} ] } ] } ],
-  "files": [ {"path": "a/b.java", "lines": 1234, "first": 3, "read": 110, "edits": 2, "hits": 4} ]
+  "files": [ {"path": "a/b.java", "lines": 1234, "first": 3, "read": 110, "edits": 2, "edit_lines": 9, "hits": 4} ]
+                                   # lines: the file's length as the session saw it (Read's totalLines, a Write), else on disk now
 }
 """
 
@@ -477,14 +478,17 @@ def build(turns, results, root, source_root):
     files = {}
     cwd = ""
 
-    def touch(path, kind, lines, n):
-        f = files.setdefault(path, {"path": path, "lines": None, "first": n, "read": 0, "edits": 0, "hits": 0})
+    def touch(path, kind, lines, n, size=None):
+        f = files.setdefault(path, {"path": path, "lines": None, "first": n, "read": 0, "edits": 0, "edit_lines": 0, "hits": 0})
         if kind == "read":
             f["read"] += lines or 0
         elif kind == "edit":
             f["edits"] += 1
+            f["edit_lines"] += lines or 0
         elif kind == "hit":
             f["hits"] += lines or 0
+        if size:  # the file's length when the session read or wrote it
+            f["_then"] = max(f.get("_then") or 0, size)
 
     for turn in turns:
         turn["result_chars"] = 0
@@ -506,7 +510,7 @@ def build(turns, results, root, source_root):
                 if entry.get("error"):
                     entry["files"] = []
                 for f in entry["files"]:
-                    touch(f["path"], f["kind"], f["lines"], turn["n"])
+                    touch(f["path"], f["kind"], f["lines"], turn["n"], f.get("size"))
                 turn["tools"].append(entry)
                 continue
             out = res["text"]
@@ -524,12 +528,17 @@ def build(turns, results, root, source_root):
             elif name == "Read":
                 p = rel(inp.get("file_path", ""), root)
                 entry["kind"], entry["detail"] = "read", p + (f" [{inp['offset']}+{inp.get('limit', '')}]" if inp.get("offset") else "")
+                info = (res["structured"] or {}).get("file") if isinstance(res["structured"], dict) else None
                 entry["files"] = [{"path": p, "kind": "read", "lines": entry["lines"]}]
+                if isinstance(info, dict) and info.get("totalLines"):
+                    entry["files"][0]["size"] = info["totalLines"]  # the file's length at the time
             elif name in ("Edit", "MultiEdit", "Write", "NotebookEdit"):
                 p = rel(inp.get("file_path", ""), root)
                 lines = count_patch_lines(res["structured"]) if name != "Write" else len(inp.get("content", "").splitlines())
                 entry["kind"], entry["detail"], entry["lines"] = "edit", p, lines
                 entry["files"] = [{"path": p, "kind": "edit", "lines": lines}]
+                if name == "Write":
+                    entry["files"][0]["size"] = lines
             elif name in ("Grep", "Glob"):
                 entry["kind"] = "search"
                 entry["detail"] = f"{name} {inp.get('pattern', '')} {inp.get('path', '') or ''}".strip()
@@ -545,7 +554,7 @@ def build(turns, results, root, source_root):
             if res["error"]:
                 entry["files"] = []
             for f in entry["files"]:
-                touch(f["path"], f["kind"], f["lines"], turn["n"])
+                touch(f["path"], f["kind"], f["lines"], turn["n"], f.get("size"))
             turn["tools"].append(entry)
         if not turn["tools"]:
             turn["tools"].append({"tool": "text", "kind": "text", "detail": turn["text"], "lines": 0, "files": []})
@@ -560,8 +569,11 @@ def build(turns, results, root, source_root):
         turn["new"] = {"prev_output": prev_output, "tool_results": tool_results, "setup": rest if prev is None else 0,
                        "other": 0 if prev is None else rest}
         prev = turn
-    if source_root:
-        for f in files.values():
+    for f in files.values():  # size: as recorded during the session (Read's totalLines, a Write), else counted on disk now
+        then = f.pop("_then", None)
+        if then:
+            f["lines"] = then
+        elif source_root:
             p = os.path.join(source_root, f["path"])
             if os.path.isfile(p):
                 try:

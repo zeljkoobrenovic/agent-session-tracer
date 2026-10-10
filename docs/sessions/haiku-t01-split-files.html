@@ -174,6 +174,20 @@ table.grid { border-collapse: separate; border-spacing: 0; font-size: 12px; widt
 .detail .k { display: inline-block; min-width: 54px; color: var(--muted); }
 .detail .k.err { color: var(--error); }
 .detail .files { color: var(--faint); font-size: 12px; margin-left: 58px; display: block; }
+details.map { margin: 8px 0 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 10px 16px 12px; max-width: 1100px; }
+details.map summary { cursor: pointer; font-weight: 500; }
+details.map summary:hover { text-decoration: underline; }
+details.map p.hint { margin: 6px 0 8px; }
+details.map .sw::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin: 0 4px 0 2px; vertical-align: -1px; background: var(--c); }
+.map-wrap { overflow: auto; }
+#map { display: block; max-width: 100%; }
+#map circle.file { fill: var(--surface-2); stroke: var(--border); stroke-width: 1; cursor: pointer; }
+#map circle.file.unknown { stroke-dasharray: 3 2; }
+#map circle.read { fill: var(--read); opacity: .35; pointer-events: none; }
+#map circle.edit { fill: var(--write); opacity: .9; pointer-events: none; }
+#map g.f:hover circle.file { stroke: var(--text); stroke-width: 1.5; }
+#map text { font-size: 10px; fill: var(--text); pointer-events: none; text-anchor: middle; dominant-baseline: central; }
+.grid tr.file.flash th.head, .grid tr.file.flash td { background: var(--sel); transition: background .6s; }
 .tip { position: fixed; z-index: 10; pointer-events: none; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 12px; max-width: 520px; box-shadow: 0 4px 16px rgba(0,0,0,.15); white-space: pre-wrap; word-break: break-word; display: none; }
 .dropzone { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; background: rgba(42,120,214,.12); backdrop-filter: blur(2px); border: 3px dashed var(--read); font-size: 22px; color: var(--text); pointer-events: none; }
 .dropzone span { background: var(--surface); padding: 12px 24px; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.15); }
@@ -227,6 +241,7 @@ a { color: var(--read); }
   <p><b>Re-sent from cache, new on top.</b> The blue bar grows every turn because the whole conversation so far is re-sent with each call. The thin slice on top is what the turn added, which the next turn re-sends in blue. Its light-blue base is the static prefix shared by all sessions, the fixed system prompt and the tool definitions, which the CLI keeps cached, so even the first call reads it rather than writing it. The cost of a session is mostly the area under the blue bars, so the number of turns and what each one appends matter more than any single read.</p>
   <p><b>New, written to cache.</b> That slice alone: the results of the tools the agent called last turn (orange, estimated at 2.3 characters per token, the rate measured on these transcripts), the agent's own previous words and tool calls (green), on the first turn the session setup (yellow: the session-specific system prompt sections, the skill and agent listings, CLAUDE.md, the task prompt) and later the per-turn reminders and instructions the CLI injects (grey).</p>
   <p><b>Files.</b> The bar above the grid sorts the file rows (first seen, lines read, edits, search hits, file size, name) and filters them by a part of their path; both are remembered in this browser. Lines attributed to a file are those in tool output: a <code>Read</code> or <code>cat/sed/head</code> of the file counts as read lines, an <code>Edit</code> as edited lines, a <code>grep</code> output line naming the file as a search hit. Files seen only in search results are hidden by default.</p>
+  <p><b>Files map.</b> Under the grid, every file of the session as a circle whose area is the file's length as the session saw it (a <code>Read</code> reports the total; otherwise the file is counted on disk when the trace is made). Inside, the share of the file's lines the agent read in blue and the share it edited in orange, both as areas, so the eye compares like with like: a small orange dot in a large circle is a small change to a long file. Files whose length is unknown are dashed and sized by the lines touched. The file rows' filter applies; click a circle to jump to its row.</p>
   <p><b>Interacting.</b> Hover any cell or row label for details. Click a turn number or any cell in its column to list the turn's commands; <kbd>←</kbd> <kbd>→</kbd> step between turns, <kbd>Esc</kbd> closes. The ▸ next to a row label opens its breakdown.</p>
   <p><b>Codex sessions</b> look the same, read from <code>~/.codex/sessions</code>. The OpenAI API reports cached and uncached input rather than cache writes, so the orange row is "New, not from cache": the input tokens the call sent that were not served from the cache, the context it added, billed at the input rate. The output row includes the reasoning tokens. Edits come from the patches Codex applied, commands and their output from its command log.</p>
   <p><b>Live mode</b> (<code>serve.py</code>). The trace refreshes every few seconds. The session dropdown switches to any other session started in the same folder; "latest" keeps following, and picks up a new session when one starts. With "follow newest turn" on, each new turn is selected and scrolled into view, so the detail panel shows what the agent is doing now; picking another turn pauses that until you tick it again. While the tab is in the background its title counts the turns that arrived.</p>
@@ -264,6 +279,11 @@ a { color: var(--read); }
   <span class="hint" id="fcount"></span>
 </div>
 <div class="grid-wrap"><table class="grid" id="grid" aria-label="Tokens, tool calls and files per turn"></table></div>
+<details class="map" id="mapBox" open>
+  <summary>Files map <span class="hint" id="mapHint"></span></summary>
+  <p class="hint">Each circle is a file, its area the file's length as the session saw it (dashed: length unknown, sized by the lines touched). <span class="sw" style="--c: var(--read)"></span>the share of its lines read, <span class="sw" style="--c: var(--write)"></span>the share edited, both as areas, so a thin orange dot in a big circle is a small change in a long file. The file rows' filter applies. Hover for the numbers, click to jump to the file's row.</p>
+  <div class="map-wrap"><svg id="map" role="img" aria-label="Files of the session as circles"></svg></div>
+</details>
 <section class="detail" id="detail" hidden aria-live="polite"></section>
 <section class="prompts" id="prompts" hidden></section>
 
@@ -701,10 +721,89 @@ a { color: var(--read); }
     if (label) label.textContent = 'Files (' + (shown === rows.length ? rows.length : shown + ' of ' + rows.length) + (hiddenHits ? ', ' + hiddenHits + ' search-only hidden' : '') + ')';
     fcount.textContent = rows.length ? (q ? shown + ' of ' + rows.length + ' match' : '') : '';
     try { localStorage.setItem('trace-files', JSON.stringify({sort: key, filter: ffilter.value, hideHits: hideHits.checked})); } catch (e) {}
+    renderMap();
   }
   fsort.addEventListener('change', applyFiles);
   ffilter.addEventListener('input', applyFiles);
   ffilter.addEventListener('keydown', function (e) { if (e.key === 'Escape') { ffilter.value = ''; applyFiles(); } e.stopPropagation(); });
+
+  // files map: one circle per file (area = lines), the share read in blue and the share edited in orange inside
+  var mapSvg = $('map'), mapHint = $('mapHint'), mapBox = $('mapBox');
+  try { mapBox.open = localStorage.getItem('trace-map') !== 'closed'; } catch (e) {}
+  mapBox.addEventListener('toggle', function () { try { localStorage.setItem('trace-map', mapBox.open ? 'open' : 'closed'); } catch (e) {} });
+  function packCircles(items) {
+    var n = items.length, golden = Math.PI * (3 - Math.sqrt(5));
+    var area = items.reduce(function (a, c) { return a + c.r * c.r * Math.PI; }, 0), R = Math.sqrt(area / Math.PI) * 1.15;
+    items.forEach(function (c, i) { var d = R * Math.sqrt((i + 0.5) / n), a = i * golden; c.x = d * Math.cos(a); c.y = d * Math.sin(a); });
+    for (var it = 0; it < (n > 600 ? 40 : 90); it++) {
+      for (var i = 0; i < n; i++) {
+        var a = items[i];
+        for (var j = i + 1; j < n; j++) {
+          var b = items[j], dx = b.x - a.x, dy = b.y - a.y, d2 = dx * dx + dy * dy, min = a.r + b.r + 1.5;
+          if (d2 >= min * min) continue;
+          var d = Math.sqrt(d2);
+          if (d < 0.01) { dx = Math.random() - 0.5; dy = Math.random() - 0.5; d = Math.sqrt(dx * dx + dy * dy); }
+          var push = (min - d) / d / 2;
+          a.x -= dx * push; a.y -= dy * push; b.x += dx * push; b.y += dy * push;
+        }
+      }
+      items.forEach(function (c) { c.x *= 0.985; c.y *= 0.985; });  // a gentle pull to the middle keeps the pack round
+    }
+  }
+  function renderMap() {
+    if (!current) return;
+    var q = ffilter.value.trim().toLowerCase();
+    var files = current.files.filter(function (f) { return (!hideHits.checked || f.read || f.edits) && (!q || f.path.toLowerCase().indexOf(q) >= 0); });
+    var edited = files.filter(function (f) { return f.edits; }).length, total = files.length;
+    files = files.map(function (f) {
+      var size = f.lines || 0, known = size > 0, touched = Math.max(f.read || 0, f.edit_lines || 0, 1);
+      return {f: f, size: known ? size : touched, known: known};
+    }).sort(function (a, b) { return b.size - a.size; }).slice(0, 1500);
+    if (!files.length) { mapSvg.innerHTML = ''; mapSvg.removeAttribute('viewBox'); mapHint.textContent = ' · no files'; return; }
+    var maxSize = files[0].size, k = 60 / Math.sqrt(maxSize);
+    files.forEach(function (c) { c.r = Math.max(4, Math.sqrt(c.size) * k); });
+    packCircles(files);
+    var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    files.forEach(function (c) { minX = Math.min(minX, c.x - c.r); minY = Math.min(minY, c.y - c.r); maxX = Math.max(maxX, c.x + c.r); maxY = Math.max(maxY, c.y + c.r); });
+    var pad = 4, W = maxX - minX + 2 * pad, H = maxY - minY + 2 * pad, width = Math.min(1068, Math.max(320, Math.round(W * 2.4)));
+    if (width * H / W > 640) width = Math.max(320, Math.round(640 * W / H));  // never taller than a screen
+    var h = '';
+    files.forEach(function (c) {
+      var f = c.f, size = c.size, rRead = f.read && c.known ? c.r * Math.sqrt(Math.min(f.read, size) / size) : 0;
+      var rEdit = f.edits ? (f.edit_lines && c.known ? Math.max(2.5, c.r * Math.sqrt(Math.min(f.edit_lines, size) / size)) : 2.5) : 0;
+      var tip = f.path + '\n' + (c.known ? fmt(f.lines) + ' lines' : 'length unknown') + (f.read ? ' · ' + fmt(f.read) + ' read' + (c.known ? ' (' + Math.round(100 * Math.min(f.read, size) / size) + '%)' : '') : ' · not read') +
+        (f.edits ? ' · ' + f.edits + ' edit' + (f.edits > 1 ? 's' : '') + (f.edit_lines ? ', ' + fmt(f.edit_lines) + ' lines' + (c.known ? ' (' + Math.round(100 * Math.min(f.edit_lines, size) / size) + '%)' : '') : '') : '') + (f.hits ? ' · ' + f.hits + ' search hits' : '') + (f.first ? '\nfirst seen in turn ' + f.first : '');
+      var x = (c.x - minX + pad).toFixed(1), y = (c.y - minY + pad).toFixed(1);
+      h += '<g class="f" data-path="' + esc(f.path) + '" data-tip="' + esc(tip) + '"><circle class="file' + (c.known ? '' : ' unknown') + '" cx="' + x + '" cy="' + y + '" r="' + c.r.toFixed(1) + '"></circle>';
+      if (rRead) h += '<circle class="read" cx="' + x + '" cy="' + y + '" r="' + rRead.toFixed(1) + '"></circle>';
+      if (rEdit) h += '<circle class="edit" cx="' + x + '" cy="' + y + '" r="' + rEdit.toFixed(1) + '"></circle>';
+      if (c.r >= 16) { var name = base(f.path), room = Math.floor(c.r * 2 / 5.6); if (name.length > room) name = name.slice(0, Math.max(3, room - 1)) + '…'; h += '<text x="' + x + '" y="' + y + '">' + esc(name) + '</text>'; }
+      h += '</g>';
+    });
+    mapSvg.setAttribute('viewBox', '0 0 ' + W.toFixed(1) + ' ' + H.toFixed(1));
+    mapSvg.setAttribute('width', width); mapSvg.setAttribute('height', Math.round(width * H / W));
+    mapSvg.innerHTML = h;
+    mapHint.textContent = ' · ' + total + ' file' + (total === 1 ? '' : 's') + (edited ? ', ' + edited + ' edited' : '') + (total > files.length ? ', the ' + files.length + ' largest shown' : '');
+  }
+  mapSvg.addEventListener('mousemove', function (e) {
+    var g = e.target.closest('[data-tip]');
+    if (!g) { tip.style.display = 'none'; return; }
+    tip.textContent = g.getAttribute('data-tip'); tip.style.display = 'block';
+    var x = e.clientX + 14, y = e.clientY + 14;
+    if (x + 540 > window.innerWidth) x = Math.max(8, e.clientX - 530);
+    if (y + tip.offsetHeight > window.innerHeight) y = Math.max(8, e.clientY - tip.offsetHeight - 8);
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  });
+  mapSvg.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  mapSvg.addEventListener('click', function (e) {
+    var g = e.target.closest('[data-path]');
+    if (!g) return;
+    var row = grid.querySelector('tr.file[data-path="' + g.getAttribute('data-path').replace(/"/g, '\\"') + '"]');
+    if (!row) return;
+    row.hidden = false;
+    row.scrollIntoView({block: 'center', behavior: 'smooth'});
+    row.classList.add('flash'); setTimeout(function () { row.classList.remove('flash'); }, 1800);
+  });
 
   function addOption(t) { var o = document.createElement('option'); o.value = EXAMPLES.indexOf(t); o.textContent = t.title; pick.appendChild(o); return o; }
   EXAMPLES.forEach(addOption);
