@@ -1,0 +1,37 @@
+docs/sessions/sonnet-t01-long-files.html
+  s_7e2cafd0fddf42::t_9feaff1a4971a4 6,229,302,308
+docs/sessions/index.html
+  s_7e2cafd0fddf42::t_9feaff1a4971a4 145,148
+README.md
+  s_7e2cafd0fddf42::t_9feaff1a4971a4 1,6-7
+template.html
+  s_7e2cafd0fddf42::t_9feaff1a4971a4 6,229,302,308
+sessions_template.html
+  s_7e2cafd0fddf42::t_9feaff1a4971a4 145,148
+docs/sessions/haiku-t01-long-files.html
+  s_7e2cafd0fddf42::t_9feaff1a4971a4 6,229,302,308
+.idea/modules.xml
+  s_7e2cafd0fddf42::t_9feaff1a4971a4 5
+docs/index.html
+  s_7e2cafd0fddf42::t_9feaff1a4971a4 6,229,302,308
+docs/sessions/haiku-t01-split-files.html
+  s_7e2cafd0fddf42::t_9feaff1a4971a4 6,229,302,308
+docs/sessions/sonnet-t01-split-files.html
+  s_7e2cafd0fddf42::t_9feaff1a4971a4 6,229,302,308
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3270e2efd0f79607effff388f3c7d8b101232da5",
+  "prompts": {},
+  "sessions": {
+    "s_7e2cafd0fddf42": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2e8d7813-8ffa-4170-8f6f-7b138ee71243",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Zeljko Obrenovic <zeljkoobrenovic@yahoo.com>"
+    }
+  }
+}
