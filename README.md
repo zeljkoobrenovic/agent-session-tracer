@@ -63,7 +63,7 @@ second per 50 MB of transcript. `--trace a.json` adds a trace extracted earlier 
 server has the same table at http://localhost:8765/sessions, refreshed every 30 s, whose rows open the session in the
 live trace page (`/?session=<id>`).
 
-![The sessions table: 14 sessions of one folder with their prompts, turns, cost, time, tool calls, files and tokens](images/sessions-page.png)
+![The sessions table: 14 sessions of one folder, each with its agent, prompt, turns, cost, time, tool calls, files and tokens](images/sessions-page.png)
 
 Claude Code deletes transcripts after its `cleanupPeriodDays` (30 by default), so extract a trace in time or copy the
 transcript.
