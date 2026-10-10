@@ -1,0 +1,41 @@
+sessions_template.html
+  s_343cdd0be6db82::t_cd0818998e1e6a 126
+  s_783ad5fae2baa2::t_607cc9f15a8cb0 173-183
+  s_343cdd0be6db82::t_16b7cab7cf4cbd 99-103,168-172,184-185,204-213,326,365-366,375-376,387-393,474-475,484,577,589,601,629
+  s_343cdd0be6db82::t_83adf17902a382 104-125,127-128,148,163,186-190,203,288-293,299,325,327,360,383-386,394-473,476-483,485-576,578-588,590
+  s_783ad5fae2baa2::t_1cc872513ebd99 7,591
+docs/sessions/index.html
+  s_343cdd0be6db82::t_78d6a609203d14 104-128,163,186-190,194,203,288-293,299,325,327,360,383-386,394-473,476-483,485-576,578-588,590
+  s_783ad5fae2baa2::t_787c97158c0ca4 173-183
+  s_343cdd0be6db82::t_958a67e650fab8 99-103,168-172,184-185,204-213,326,365-366,375-376,387-393,474-475,484,577,589,601,629
+  s_783ad5fae2baa2::t_d971d9da38088a 591
+turn_trace.py
+  s_343cdd0be6db82::t_4b3ebeaf73d1bf 639-642
+README.md
+  s_343cdd0be6db82::t_8435d919d2d937 59-63
+  s_783ad5fae2baa2::t_bd09803723d7b5 166
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8909497598b1c3b449d91bd9d3d6d047d9e68d64",
+  "prompts": {},
+  "sessions": {
+    "s_343cdd0be6db82": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dccae701-eee6-4ce9-94eb-8af449013535",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Zeljko Obrenovic <zeljkoobrenovic@yahoo.com>"
+    },
+    "s_783ad5fae2baa2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "85d50b89-c10a-440a-b45e-cb87a1c7dacc",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Zeljko Obrenovic <zeljkoobrenovic@yahoo.com>"
+    }
+  }
+}
