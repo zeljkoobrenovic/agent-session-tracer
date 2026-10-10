@@ -1,0 +1,19 @@
+.gitignore
+  s_783ad5fae2baa2::t_bb5d6e2210ec2f 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0480ab1887ccfbae9938f83f782a81560952a14c",
+  "prompts": {},
+  "sessions": {
+    "s_783ad5fae2baa2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "85d50b89-c10a-440a-b45e-cb87a1c7dacc",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Zeljko Obrenovic <zeljkoobrenovic@yahoo.com>"
+    }
+  }
+}
