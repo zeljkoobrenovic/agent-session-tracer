@@ -163,7 +163,7 @@ reads.
 save an agent tokens? below the read budget it does not), Sonnet 5.5 and Haiku 5.5 on the same task against long and
 split files. `build_page.py` embeds them into `docs/index.html` from `template.html`; the page loads nothing from the network
 (its only companion file is the logo), light and dark, and `serve.py` serves the same template in live mode.
-`docs/sessions/` is the sessions table of the same examples (`build_sessions.py $(printf -- '--trace %s ' examples/*.json) --out docs/sessions`),
+`docs/sessions/` is the sessions table of the same examples (`build_sessions.py $(printf -- '--trace %s ' examples/*.json) --title "the embedded examples" --out docs/sessions`),
 from `sessions_template.html`.
 
 ## License
