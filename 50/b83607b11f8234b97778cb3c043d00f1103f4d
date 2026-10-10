@@ -1,0 +1,52 @@
+sessions_template.html
+  s_0af420b20b4753::t_9e51d8aeb33a83 1-331
+  s_0af420b20b4753::t_bba6e3ec0c4727 332-335
+README.md
+  s_0af420b20b4753::t_e6555dee5a634d 6-7,47-67,84-86,108-111,131-132
+build_page.py
+  s_0af420b20b4753::t_da83aeab322c29 5-6,13-14,26-27
+build_sessions.py
+  s_0af420b20b4753::t_55226bd8fa1040 1-128
+docs/index.html
+  s_0af420b20b4753::t_b8525142d12e63 34-36,207,272,276,313-314,733,739-740
+docs/sessions/haiku-t01-long-files.html
+  s_0af420b20b4753::t_3375cbbbd49a55 1-815
+docs/sessions/haiku-t01-split-files.html
+  s_0af420b20b4753::t_ca952c11bb2b7e 1-815
+docs/sessions/index.html
+  s_0af420b20b4753::t_431ca4886a4e48 1-335
+docs/sessions/sonnet-t01-long-files.html
+  s_0af420b20b4753::t_501053a2041e8b 1-815
+docs/sessions/sonnet-t01-split-files.html
+  s_0af420b20b4753::t_b3fd89ec046d04 1-815
+examples/haiku-t01-long-files.json
+  s_0af420b20b4753::t_efa4d4f8ac40d0 19-28,48-53,78-82,123-127,158-162,188-192,228-232,263-267,298-302,333-337,363-367,392-396,421-425,450-454
+examples/haiku-t01-split-files.json
+  s_0af420b20b4753::t_0417be8d2b4953 8,19-28,48-53,78-82,173-177,221-225,250-254,292-296,322-326,352-356,381-385,410-414
+examples/sonnet-t01-long-files.json
+  s_0af420b20b4753::t_b490dafc806db2 8,19-28,48-53,78-82,118-122,148-152,183-187,223-227,263-267,293-297,335-339,364-368
+examples/sonnet-t01-split-files.json
+  s_0af420b20b4753::t_7503f7bfcf5e66 8,19-28,48-53,78-82,118-122,148-152,177-181,212-216,241-245,276-280,318-322,347-351
+serve.py
+  s_0af420b20b4753::t_c39cdd23c5023c 13-15,40,43,60,67-95,114-121,143-146
+template.html
+  s_0af420b20b4753::t_018988f4a75f15 34-36,207,272,313-314,733,739-740
+turn_trace.py
+  s_0af420b20b4753::t_1b4a102cb6d9ee 64-111,515-520,526-593
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "50b83607b11f8234b97778cb3c043d00f1103f4d",
+  "prompts": {},
+  "sessions": {
+    "s_0af420b20b4753": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f8fc5201-db12-4f99-a873-2c992f5fc97e",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Zeljko Obrenovic <zeljkoobrenovic@yahoo.com>"
+    }
+  }
+}
