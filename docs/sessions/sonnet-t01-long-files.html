@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Claude Session Tracer</title>
+<title>Agent Session Tracer</title>
 <link rel="icon" type="image/png" href="claude.png">
 <meta name="description" content="What an AI coding agent reads, searches and edits in each turn, and what each turn re-sends from the cache, adds to it and produces.">
 <script>(function () { var th = 'light'; try { th = localStorage.getItem('trace-theme') || th; } catch (e) {} document.documentElement.setAttribute('data-theme', th === 'dark' || th === 'auto' ? th : 'light'); })();</script>
@@ -226,7 +226,7 @@ a { color: var(--read); }
 <div class="top">
   <span class="logos"><img class="logo" src="claude.png" alt="Claude Code" width="78" height="78"><img class="logo codex" src="codex.png" alt="Codex" width="78" height="78"></span>
   <div>
-    <h1>Claude Session Tracer</h1>
+    <h1>Agent Session Tracer</h1>
     <p class="lead">What one Claude Code or Codex session cost, turn by turn: the context each API call re-sent from the prompt cache, what it added to it, what it produced, and the files the agent read, searched and edited along the way.</p>
   </div>
   <button type="button" class="icon-btn" id="theme" title="Theme">☀</button>
@@ -299,13 +299,13 @@ a { color: var(--read); }
 
 <details class="help">
   <summary>Make a trace of your own session</summary>
-  <p>Claude Code keeps a transcript of every session. Extract one with the script from the <a href="https://github.com/zeljkoobrenovic/claude-session-tracer">repository</a> (Python 3.8+, no dependencies) and open or drop the result here:</p>
+  <p>Claude Code keeps a transcript of every session. Extract one with the script from the <a href="https://github.com/zeljkoobrenovic/agent-session-tracer">repository</a> (Python 3.8+, no dependencies) and open or drop the result here:</p>
   <p><code>python3 turn_trace.py --cwd /path/you/ran/claude/in --out trace.json</code></p>
   <p><code>--list</code> shows the sessions started in a folder, <code>--session &lt;id prefix&gt;</code> picks one. Nothing leaves your browser: the page has no external resources and does not upload the file.</p>
   <p>To watch a session while it runs, start <code>python3 serve.py --cwd /path/you/ran/claude/in</code> instead: it opens this page in live mode, following the latest session of that folder and refreshing it every few seconds.</p>
 </details>
 
-<footer>Generated 2026-10-10. Built from the Claude Code transcript af9f95ed-5769-4202-ba44-6c5c7fa52962.jsonl. Source and extractor at <a href="https://github.com/zeljkoobrenovic/claude-session-tracer">claude-session-tracer</a>. No external resources.</footer>
+<footer>Generated 2026-10-10. Built from the Claude Code transcript af9f95ed-5769-4202-ba44-6c5c7fa52962.jsonl. Source and extractor at <a href="https://github.com/zeljkoobrenovic/agent-session-tracer">agent-session-tracer</a>. No external resources.</footer>
 </main>
 <div class="tip" id="tip"></div>
 <div class="dropzone" id="dropzone" hidden><span>Drop the trace JSON to render it</span></div>

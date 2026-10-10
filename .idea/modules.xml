@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/claude-session-tracer.iml" filepath="$PROJECT_DIR$/.idea/claude-session-tracer.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/agent-session-tracer.iml" filepath="$PROJECT_DIR$/.idea/agent-session-tracer.iml" />
     </modules>
   </component>
 </project>

@@ -1,10 +1,10 @@
-# Claude session tracer
+# Agent session tracer
 
 See what a Claude Code or Codex session cost, turn by turn: one column per API call, the tokens it re-sent from the
 prompt cache, wrote to it and produced, and the files the agent read, searched and edited in that turn.
 
-**Page:** https://zeljkoobrenovic.github.io/claude-session-tracer/ (example sessions embedded; drop your own trace on it);
-the same examples [as a sessions table](https://zeljkoobrenovic.github.io/claude-session-tracer/sessions/).
+**Page:** https://zeljkoobrenovic.github.io/agent-session-tracer/ (example sessions embedded; drop your own trace on it);
+the same examples [as a sessions table](https://zeljkoobrenovic.github.io/agent-session-tracer/sessions/).
 
 ![A trace: ten turns, the re-sent context climbing every turn on top of a shared prefix, the new context per turn split by origin, tool calls per turn, three files read in short windows](images/trace-page.png)
 
