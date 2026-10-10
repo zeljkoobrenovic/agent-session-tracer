@@ -1,0 +1,19 @@
+README.md
+  s_7e2cafd0fddf42::t_187687ecacae66 110-111,116,125-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1323141df5ad528b7881676b3e7de60e88955fee",
+  "prompts": {},
+  "sessions": {
+    "s_7e2cafd0fddf42": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2e8d7813-8ffa-4170-8f6f-7b138ee71243",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Zeljko Obrenovic <zeljkoobrenovic@yahoo.com>"
+    }
+  }
+}
